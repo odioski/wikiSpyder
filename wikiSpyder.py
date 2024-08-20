@@ -8,9 +8,10 @@ from bs4 import BeautifulSoup
 from urlextract import URLExtract
 # initial link extraction
 
-global wiki_data
 
 def start_app():
+
+    global wiki_data
 
     wiki_page = input("Enter a Wikipedia search result URL... \n\n")
 
@@ -34,28 +35,28 @@ def extract_urls():
     
     urls = extractor.find_urls(spoon)
 
-""" new_photos = ["NULL"]
+# new_photos = ["NULL"]
 
-print(urls, "\n\n")   ... solved
+# print(urls, "\n\n")   ... solved
 
-def scrape_photo_links():
+# def scrape_photo_links():
 
-    for item in urls:
+#     for item in urls:
 
-        finds = re.match('[\W+\w+]+[\b.jpg]+', item)
+#         finds = re.match('[\W+\w+]+[\b.jpg]+', item)
 
-        if finds:
+#         if finds:
 
-            new_photos.append(finds)
+#             new_photos.append(finds)
         
-    print("\n\n")
+#     print("\n\n")
 
-    new_photos.pop(0)
+#     new_photos.pop(0)
         
-    for item in new_photos:
+#     for item in new_photos:
 
-        print(item[0])
- """
+#         print(item[0])
+
     
 new_links = ['NULL']
 
@@ -63,7 +64,7 @@ def scrape_links():
 
     for item in urls:
             
-        finds = re.match('[^pinnable.]+[https://]+[\w+\W+]+', item)
+        finds = re.match('[^pinnable.]+[^upload.]+[https://]+[\w+\W+]+[^.j]+[^.png]+[^.sv]+[^.svg]+', item)
 
         if finds:
 
@@ -76,6 +77,10 @@ def scrape_links():
     for item in new_links:
 
         print(item[0])
+
+    total_links = len(new_links)
+
+    print("\n\n" + str(total_links) + " Links. ")
 
 #  Need to write these to a file as well.
 
