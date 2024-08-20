@@ -1,10 +1,9 @@
 import requests
 import re
-
 # For spider
 
 from bs4 import BeautifulSoup
-# parse wikipedia page for Reference sections
+# parse wikipedia page Reference sections
 
 from urlextract import URLExtract
 # extract links
