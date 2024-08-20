@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 # parse wikipedia page Reference sections
 
 from urlextract import URLExtract
-# extract links
+# initial link extraction
 
 global wiki_data
 
