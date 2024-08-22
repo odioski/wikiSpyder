@@ -1,139 +1,52 @@
 import requests
 import re
-# For spider
 
 from bs4 import BeautifulSoup
 # parse wikipedia page Reference sections
 
-from urlextract import URLExtract
-# initial link extraction
+# Highly simplified with CoPilot, yet did need a bit of tailoring.
 
+def get_external_links(url):
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, 'html.parser')
 
-def start_app():
+    external_links = []
 
-    global wiki_data
+    for ref in soup.find_all('span', class_='reference-text'):
+        for link in ref.find_all('a', class_='external text', href=True):
+            external_links.append(link['href'])
 
-    wiki_page = input("Enter a Wikipedia search result URL... \n\n")
+    return external_links
 
-    spider = requests.get(wiki_page)
+def get_images_from_link(link):
+    try:
+        response = requests.get(link)
+        soup = BeautifulSoup(response.content, 'html.parser')
 
-    wiki_data = spider.text    
-
-def extract_urls():
-
-    global urls
-
-    soup = BeautifulSoup(wiki_data, 'html.parser')
-
-    bowl = soup.find_all("a", class_="external text")
-
-    spoon = soup.decode_contents(bowl)
-
-    extractor = URLExtract()
-
-#   There is much in a DOM, URLExtract filters everything leaving URL's...although, the practice would sharpen your RegEx skills.
-    
-    urls = extractor.find_urls(spoon)
-
-# new_photos = ["NULL"]
-
-# print(urls, "\n\n")   ... solved
-
-# def scrape_photo_links():
-
-#     for item in urls:
-
-#         finds = re.match('[\W+\w+]+[\b.jpg]+', item)
-
-#         if finds:
-
-#             new_photos.append(finds)
+        images = []
         
-#     print("\n\n")
+        for img in soup.find_all('img', src=True):
+            images.append(img['src'])
 
-#     new_photos.pop(0)
-        
-#     for item in new_photos:
-
-#         print(item[0])
-
+        return images
     
-new_links = ['NULL']
+    except requests.exceptions.RequestException as e:
+        print(f"Error accessing {link}: {e}")
+        return []
 
-def scrape_links():
+wikipedia_url = input("Enter a wikipedia search result...\n\n")
+external_links = get_external_links(wikipedia_url)
 
-    for item in urls:
-            
-        finds = re.match('[^pinnable.]+[^upload.]+[https://]+[\w+\W+]+[^.j]+[^.png]+[^.sv]+[^.svg]+', item)
+print("External Links and Images:")
 
-        if finds:
-
-            new_links.append(finds)
-
-    print("\n\n")
-
-    new_links.pop(0)
+for link in external_links:
+    print(f"Link: {link}")
+    images = get_images_from_link(link)
     
-    for item in new_links:
+    for img in images:
+        real_img = re.compile(img)
+        real_img = re.match(r'[\b.png]+[\b.jpg]+[\b.jpeg]+[\b.gif]+[\b.webp]', img)
+        # just a tiny haircut, that's all ... so far.
 
-        print(item[0])
-
-    total_links = len(new_links)
-
-    print("\n\n" + str(total_links) + " Links. ")
-
-#  Need to write these to a file as well.
-
-
-# # def print_urls():
-
-#     print(".....................................................................................................\n"
-#                 + ".....................................................................................................\n"
-#                 + "....... The following are the links from the Reference section of your Wikipedia search result ......\n"
-#                 + ".....................................................................................................\n"
-#                 + ".....................................................................................................\n")
-    
-#     print(second_bowl)
-
-#     print("........................................................................................\n"
-#                 + "........................................................................................\n"
-#                 + "..................... Found " + str(total_urls) + " links in References ....................................\n"
-#                 + "........................................................................................\n"
-#                 + "........................................................................................\n")
-    
-
-# def launch_spider():
-
-#      for item in new_links:
-          
-#             spider = requests.get(item)
-
-#             loaded_spider = spider.text
-
-#             soup = BeautifulSoup(loaded_spider, 'html.parser')
-            
-#             bowl = re.compile(r"")
-
-#             bowl = soup.find_all(["p", "li",  "div"])
-
-#             print(str(bowl) + "\n\n")
-
-#             for next_term in search_terms:
-
-#                 term_search_pattern = re.compile(r'')
-
-#                 found_terms = term_search_pattern.match(next_term, bowl)
-
-start_app()
-
-extract_urls()
-
-# scrape_photo_links()
-
-scrape_links()
-
-# print_urls()
-
-# launch_spider()
-
+        print(f"  Image: {real_img}")
 

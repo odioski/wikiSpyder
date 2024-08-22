@@ -53,6 +53,10 @@ If you would like to see additional features added or have a suggestion, you can
 
 Spiders, crawlers, scrapers, copiers, and most search agents have roughly the same foundations. Usually the initial spawn of their abilities can be traced back to RegEx, a suite of tools and symbols used to create regular expressions which are useful when creating search patterns. As far as traversal and movement, the spider merely visits the webpage much like a browser and copies the DOM of the landing page. RegEx comes into play as the spider decides where to visit next based on what's LINKED in the DOM. Back at the launch site, regular expressions are employed again to find what if any which was desired if it's within the pages that were visited. RegEx is exemplary when pursuing strings, but the theory can be applied to any object which includes practically any file found in almost any accessible computer system.
 
+Oddly enough RegEx isn't employed as much, at least not in the front as you might have expected given what I just commented. I imagine Beautiful Soup uses a lot of RedEx in it's methods however I picked out what I needed from the return with my own miniscule knowledge of Regular Expressions and the code is simplified to a large degree by CoPilot. I'll have to take a closer look at Beautiful Soup one of these days. Probably not CoPilot so to respect any bounds of privacy.
+
+HINT: WHEN USING AI TO CREATE CODE IT'S A GOOD IDEA TO UNDERSTAND HOW TO BUILD WHAT YOU'RE TRYING TO BUILD PRIOR TO DEPLOYING THE AI. YOU'LL FEEL ALOT BETTER ABOUT IT AND THE IDEA OF CHEATING WON'T STING AS MUCH, MOST LIKELY, NOT AT ALL.
+
 NOTE: MOVE THESE PROJECTS TO A MORE SOCIAL NETWORK OF PROGRAMMERS. GITHUB IS MORE FOR PROFESSIONALS AND EMPLOYED PROGRAMMERS...MOST LIKELY WILL NOT FLY ON GITHUB...OR ZERO CONTRIBS, FORKS, ETC.
 HINT: BECAUSE OF THE SOCIAL...OR BECAUSE IT'S TOO OLD, TOO LATE, AND A LITTLE WEAK. BOO-HOO.
 
