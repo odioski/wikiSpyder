@@ -18,11 +18,13 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
     - wikiSpyder can save all images automatically, if Save Images is checked.
     - For now, all data pulled by wikiSpyder which isn't saved is purged once the program is exited.
 
+
 # Installation
 
     - wikiSpyder-1.0 works with Python 3.12 
     - re (RegEx module), pyQt, and other imported modules will be downloaded if not on the system upon first launch.
     - Use the Installer found in /INSTALLER if on Windows or python.exe -m setup.py if on Mac or Linux. setup.py can be found in the root of wikiSpyder.
+
 
 # Future renditions
 
@@ -36,10 +38,12 @@ i.e..:
     spotiSpyder
     and so on...and so forth.
 
+
 # How wikiSpyder works
 
     - wikiSpyder uses RegEx and Beautiful Soup to perform most of it's tasks. The rest is provided by PyQt in order to make it look good and add a little sizzle to the application.
-     
+
+
 # Gifts
 
 If you'd like to buy me a cup of coffee that would be very kind of you, but anything more will be donated to the Wikipedia Foundation for now.
@@ -55,10 +59,6 @@ Spiders, crawlers, scrapers, copiers, and most search agents have roughly the sa
 
 Oddly enough RegEx isn't employed as much, at least not in the front as you might have expected given what I just commented. I imagine Beautiful Soup uses a lot of RedEx in it's methods however I picked out what I needed from the return with my own miniscule knowledge of Regular Expressions and the code is simplified to a large degree by CoPilot. I'll have to take a closer look at Beautiful Soup one of these days. Probably not CoPilot so to respect any bounds of privacy.
 
-HINT: WHEN USING AI TO CREATE CODE IT'S A GOOD IDEA TO UNDERSTAND HOW TO BUILD WHAT YOU'RE TRYING TO BUILD PRIOR TO DEPLOYING THE AI. YOU'LL FEEL ALOT BETTER ABOUT IT AND THE IDEA OF CHEATING WON'T STING AS MUCH, MOST LIKELY, NOT AT ALL.
-
-NOTE: MOVE THESE PROJECTS TO A MORE SOCIAL NETWORK OF PROGRAMMERS. GITHUB IS MORE FOR PROFESSIONALS AND EMPLOYED PROGRAMMERS...MOST LIKELY WILL NOT FLY ON GITHUB...OR ZERO CONTRIBS, FORKS, ETC.
-HINT: BECAUSE OF THE SOCIAL...OR BECAUSE IT'S TOO OLD, TOO LATE, AND A LITTLE WEAK. BOO-HOO.
 
 # The Difference Between Spiders
 
