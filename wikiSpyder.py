@@ -5,7 +5,7 @@ import re
 # for the haircut
 
 from bs4 import BeautifulSoup
-# parse wikipedia page Reference sections
+# parse wikipedia page Reference sections (or any page...)
 
 from pathlib import Path
 
@@ -13,11 +13,12 @@ from PyQt6.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool
 from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import (QApplication, QCheckBox, QLabel, QLineEdit,
                              QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QWidget)
+
 #pyQt
 
 
 basedir = os.path.dirname(__file__)
-
+# so it can find its home dir
 
 app = QApplication([])
 
@@ -92,7 +93,6 @@ class MainWindow(QMainWindow):
         Output.setAlignment(Qt.AlignmentFlag.AlignCenter)
         Output.setWordWrap(True)
         
-    
         # first layer display...
 
         layout_z_0 = QVBoxLayout()
@@ -121,8 +121,6 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(app_container)
         self.setFixedSize(600, 600)
 
-        
-
         # image display
 
         # display of counts
@@ -133,7 +131,11 @@ class MainWindow(QMainWindow):
 
    
 def capture_links(url):
-    response = requests.get(url)
+
+    confirmed_url = re.compile(url)
+    confirmed_url = re.match(r'[wikipedia.org/wiki/]+[\w\W]+')
+
+    response = requests.get(confirmed_url)
     soup = BeautifulSoup(response.content, 'html.parser')
 
     global external_links
@@ -189,8 +191,6 @@ def cycle_button_module():
     pass
     #   Three modes:
     #   sums (hits per search term per external link), Spyder's path, and view images
-
-
 
 
 window = MainWindow()
