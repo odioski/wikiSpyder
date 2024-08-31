@@ -61,8 +61,10 @@ class MainWindow(QMainWindow):
         search_term_label = QLabel("Search terms")
         search_term_inputs = QLineEdit()
         # set the size of theis box..
+
         search_term_inputs.setPlaceholderText("TYPE or DROP your search terms here; use csv or txt file if it's a long list")
         # if we get an upload box for input..
+        
         search_term_inputs.textChanged.connect(self.disco_terms)
 
         launchButton = QPushButton("Launch")
