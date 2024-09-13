@@ -211,12 +211,11 @@ def cycle_button_module():
     #   sums (hits per search term per external link), Spyder's path, and view images
 
 window = MainWindow()
-window.show()
 
 app.setStyleSheet(Path(os.path.join(basedir, 'wikiSpyder.qss')).read_text())
-app.exec()
 
 def launch():
+    window.show()
     app.exec()
 
     # moving on to .NET's MAUI. Hopefully will be more platform pliable. Easily installed, as well as look good. ## Total bullshit, .NET's MAUI provides a layer between OS's. You'll get roughly the same with pyQt. 
