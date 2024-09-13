@@ -5,7 +5,7 @@ import re
 # for the haircut
 
 from bs4 import BeautifulSoup
-# parse wikipedia page Reference sections (or any page...)
+# parse wikipedia page Reference sections (or any web page...)
 
 from pathlib import Path
 
@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (QApplication, QCheckBox, QLabel, QLineEdit,
 
 #pyQt
 
+global newData
 
 basedir = os.path.dirname(__file__)
 # so it can find its home dir
@@ -27,19 +28,24 @@ class MainWindow(QMainWindow):
     # discos's
 
     def disco_subject(self, text):
+        
         global wikipedia_url
-        wikipedia_url = []
         
         if text == "":
             Output.setText("Please fill in the form...")
         else:
-            wikipedia_url = text
+            subject = text
+            wikipedia_url = (f'https://wikipedia.org/wiki/{subject}')
+        
+        return wikipedia_url
+        
 
     def disco_terms(self, text):
+
         global search_terms
         search_terms = []
 
-        if search_terms =="":
+        if search_terms == "":
             Output.setText("Please add some search terms")
         else:
             search_terms = text
@@ -49,7 +55,7 @@ class MainWindow(QMainWindow):
 
         # first layer methods
     
-        logo = QLabel("wikisSpyder 0.1.1")
+        logo = QLabel("wikisSpyder 0.1.9")
         logo.setPixmap(QPixmap(os.path.join(basedir, "logo.png")))
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
@@ -64,6 +70,9 @@ class MainWindow(QMainWindow):
 
         search_term_inputs.setPlaceholderText("TYPE or DROP your search terms here; use csv or txt file if it's a long list")
         # if we get an upload box for input..
+
+        # moving on to .NET's MAUI. Hopefully will be more platform pliable. Easily installed, as well as look good. ## Total bullshit, .NET's MAUI provides a layer between OS's. You'll get roughly the same with pyQt. 
+        # And, anyone using this kind of app can easily install Python on their own
         
         search_term_inputs.textChanged.connect(self.disco_terms)
 
@@ -99,6 +108,10 @@ class MainWindow(QMainWindow):
 
         layout_z_0 = QVBoxLayout()
 
+        title_panel = QVBoxLayout()
+
+        title_panel.addWidget(logo)
+
         input_panel = QVBoxLayout()
 
         input_panel.addWidget(subject_label)
@@ -111,7 +124,7 @@ class MainWindow(QMainWindow):
         control_panel.addWidget(deep_probe_button)
         control_panel.addWidget(view_images_button)
 
-        layout_z_0.addWidget(logo)
+        layout_z_0.addLayout(title_panel)
         layout_z_0.addLayout(input_panel)
         layout_z_0.addWidget(found_matches)
         layout_z_0.addWidget(Output)
@@ -129,15 +142,13 @@ class MainWindow(QMainWindow):
 
         # map (Spyder's path) display
 
-    
+        # moving on to .NET's MAUI. Hopefully will be more platform pliable. Easily installed, as well as look good. ## Total bullshit, .NET's MAUI provides a layer between OS's. You'll get roughly the same with pyQt. 
+        # And, anyone using this kind of app can easily install Python on their own
 
    
-def capture_links(url):
-
-    confirmed_url = re.compile(url)
-    confirmed_url = re.match(r'[wikipedia.org/wiki/]+[\w\W]+')
-
-    response = requests.get(confirmed_url)
+def capture_links(wikipedia_url):
+ 
+    response = requests.get(wikipedia_url)
     soup = BeautifulSoup(response.content, 'html.parser')
 
     global external_links
@@ -146,32 +157,37 @@ def capture_links(url):
     for ref in soup.find_all('span', class_='reference-text'):
         for link in ref.find_all('a', class_='external text', href=True):
             external_links.append(link['href'])
-
+            newData = external_links[0]
+            Output.setText(newData)
     return external_links
 
-def capture_images(link):
+def capture_images(external_links):
     try:
-        response = requests.get(link)
+        response = requests.get(external_links)
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        
-        global image_links
-        image_links = []
-        
+            
+        global image_link
+        image_link = []
+            
         for img in soup.find_all('img', src=True):
-            image_links.append(img['src'])    
-    
+            image_link.append(img['src'])
+
+            Output.setText(image_link)    
+        
     except requests.exceptions.RequestException as e:
-        print(f"Error accessing {link}: {e}")
+        print(f"Error accessing {external_links} : {e}")
         return []
     
 
 def get_images():
 
-    for img in image_links:
+    for img in image_link:
         img_link = re.compile(img)
         img_link = re.match(r'[\b.webp]+[\b.gif]+[b\.jpeg]+[b\.jpg]+[\b.png]', img)
-        Output(img_link) 
+        # regex to match and pick relevant images.
+
+        Output.setText(img_link) 
 
 
 # wikipedia_url = input("Enter a wikipedia search result...\n\n")
@@ -194,10 +210,11 @@ def cycle_button_module():
     #   Three modes:
     #   sums (hits per search term per external link), Spyder's path, and view images
 
-
 window = MainWindow()
 window.show()
 
 app.setStyleSheet(Path(os.path.join(basedir, 'wikiSpyder.qss')).read_text())
 app.exec()
 
+    # moving on to .NET's MAUI. Hopefully will be more platform pliable. Easily installed, as well as look good. ## Total bullshit, .NET's MAUI provides a layer between OS's. You'll get roughly the same with pyQt. 
+    # And, anyone using this kind of app can easily install Python on their own

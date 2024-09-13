@@ -41,7 +41,11 @@ i.e..:
 
 # How wikiSpyder works
 
-    - wikiSpyder uses RegEx and Beautiful Soup to perform most of it's tasks. The rest is provided by PyQt in order to make it look good and add a little sizzle to the application.
+    - wikiSpyder uses RegEx and Beautiful Soup to perform most of it's tasks. The rest is provided by PyQt in order to make it look good and add a little sizzle to the application. Once I learn how Beautiful... works, I'll exclude them as well.
+
+# moving on to .NET's MAUI. Hopefully will be more platform pliable. Easily installed, as well as look good. ## Total bullshit, .NET's MAUI provides a layer between OS's. You'll get roughly the same with pyQt. 
+# And, anyone using this kind of app can install Python on their own.
+
 
 
 # Gifts
@@ -55,16 +59,13 @@ If you would like to see additional features added or have a suggestion, you can
 
 # How Spiders Work
 
-Spiders, crawlers, scrapers, copiers, and most search agents have roughly the same foundations. Usually the initial spawn of their abilities can be traced back to RegEx, a suite of tools and symbols used to create regular expressions which are useful when creating search patterns. As far as traversal and movement, the spider merely visits the webpage much like a browser and copies the DOM of the landing page. RegEx comes into play as the spider decides where to visit next based on what's LINKED in the DOM. Back at the launch site, regular expressions are employed again to find what if any which was desired if it's within the pages that were visited. RegEx is exemplary when pursuing strings, but the theory can be applied to any object which includes practically any file found in almost any accessible computer system.
-
-Oddly enough RegEx isn't employed as much, at least not in the front as you might have expected given what I just commented. I imagine Beautiful Soup uses a lot of RedEx in it's methods however I picked out what I needed from the return with my own miniscule knowledge of Regular Expressions and the code is simplified to a large degree by CoPilot. I'll have to take a closer look at Beautiful Soup one of these days. Probably not CoPilot so to respect any bounds of privacy.
-
+Spiders, crawlers, scrapers, copiers, and most search agents have roughly the same foundations. Usually the initial spawn of their capabilities can be traced back to RegEx, a suite of tools and symbols used to create regular expressions (an introductory math tool)which are useful when creating search patterns. As far as traversal and movement, the spider merely visits the webpage much like a browser and copies (reads, as well, or merely streams) the DOM of the landing page. RegEx comes into play as the spider decides where to visit next based on what's LINKED in the DOM. Back at the launch site, regular expressions are employed again to find what if any which was desired if it's within the pages that were visited. RegEx is exemplary when pursuing strings, but the theory can be applied to any object which includes practically any file found in almost any accessible computer system.
 
 # The Difference Between Spiders
 
 All spiders are similar in the sense that they all crawl websites and that the main job is to report what they find. The real difference is the scope and focus each spider has.
 
-    - Scrapers are usually focused on particular types of media (objects, files) like audio and video, sometimes both, as well as photo images. Their scope is well defined usually, only a handful of sites, and one, maybe two or three types of media are in focus.
+    - Scrapers are usually focused on particular types of media (objects, files) like audio and video, sometimes both, as well as photo images. Their scope is well defined usually, only a handful of sites are normally visited, and one, maybe two or three types     of media are ever in focus.
     - The Copiers goal is to grab everything available from the site so to replicate or clone the targeted site.
     - Spiders can do what all the others do although storing data is far less important than finding it. Such is somewhat counterintuitive to the nature of a spider so as a crawler they're more acceptable.
     - Search agents are usually spiders in whole. They operate on a planetary scale and their scope is trained on the entire expanse of the World Wide Web.
