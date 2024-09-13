@@ -1,8 +1,8 @@
-from wikiSpyder import start_app()
+from wikiSpyder import launch
 
 def main():
 
-    start_app()
+    launch()
 
 if __name__ == "__main__":
 

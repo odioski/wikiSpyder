@@ -47,7 +47,6 @@ i.e..:
 # And, anyone using this kind of app can easily install Python on their own.
 
 
-
 # Gifts
 
 If you'd like to buy me a cup of coffee that would be very kind of you, but anything more will be donated to the Wikipedia Foundation for now.
