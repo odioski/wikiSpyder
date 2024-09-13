@@ -44,7 +44,7 @@ i.e..:
     - wikiSpyder uses RegEx and Beautiful Soup to perform most of it's tasks. The rest is provided by PyQt in order to make it look good and add a little sizzle to the application. Once I learn how Beautiful... works, I'll exclude them as well.
 
 # moving on to .NET's MAUI. Hopefully will be more platform pliable. Easily installed, as well as look good. ## Total bullshit, .NET's MAUI provides a layer between OS's. You'll get roughly the same with pyQt. 
-# And, anyone using this kind of app can install Python on their own.
+# And, anyone using this kind of app can easily install Python on their own.
 
 
 
