@@ -41,10 +41,7 @@ i.e..:
 
 # How wikiSpyder works
 
-    - wikiSpyder uses RegEx and Beautiful Soup to perform most of it's tasks. The rest is provided by PyQt in order to make it look good and add a little sizzle to the application. Once I learn how Beautiful... works, I'll exclude them as well.
-
-# moving on to .NET's MAUI. Hopefully will be more platform pliable. Easily installed, as well as look good. ## Total bullshit, .NET's MAUI provides a layer between OS's. You'll get roughly the same with pyQt. 
-# And, anyone using this kind of app can easily install Python on their own.
+    - wikiSpyder uses RegEx and Beautiful Soup to perform most of it's tasks. The rest is provided by PyQt in order to make it look good and add a little sizzle to the application. 
 
 
 # Gifts
@@ -59,6 +56,7 @@ If you would like to see additional features added or have a suggestion, you can
 # How Spiders Work
 
 Spiders, crawlers, scrapers, copiers, and most search agents have roughly the same foundations. Usually the initial spawn of their capabilities can be traced back to RegEx, a suite of tools and symbols used to create regular expressions (an introductory math tool)which are useful when creating search patterns. As far as traversal and movement, the spider merely visits the webpage much like a browser and copies (reads, as well, or merely streams) the DOM of the landing page. RegEx comes into play as the spider decides where to visit next based on what's LINKED in the DOM. Back at the launch site, regular expressions are employed again to find what if any which was desired if it's within the pages that were visited. RegEx is exemplary when pursuing strings, but the theory can be applied to any object which includes practically any file found in almost any accessible computer system.
+
 
 # The Difference Between Spiders
 
