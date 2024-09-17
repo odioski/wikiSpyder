@@ -205,8 +205,5 @@ window = MainWindow()
 
 app.setStyleSheet(Path(os.path.join(basedir, 'wikiSpyder.qss')).read_text())
 
-def launch():
-    window.show()
-    app.exec()
-
-launch()
+window.show()
+app.exec()
