@@ -66,13 +66,10 @@ class MainWindow(QMainWindow):
 
         search_term_label = QLabel("Search terms")
         search_term_inputs = QLineEdit()
-        # set the size of theis box..
+        # set the size of theis box
 
         search_term_inputs.setPlaceholderText("TYPE or DROP your search terms here; use csv or txt file if it's a long list")
-        # if we get an upload box for input..
-
-        # moving on to .NET's MAUI. Hopefully will be more platform pliable. Easily installed, as well as look good. ## Total bullshit, .NET's MAUI provides a layer between OS's. You'll get roughly the same with pyQt. 
-        # And, anyone using this kind of app can easily install Python on their own
+        # if we get an upload box for input
         
         search_term_inputs.textChanged.connect(self.disco_terms)
 
@@ -85,12 +82,11 @@ class MainWindow(QMainWindow):
         deep_probe_button.setFixedWidth(200)
         deep_probe_button.setFixedHeight(50)
         launchButton.clicked.connect(spyder_infinite)
-        
-        
+                
         view_images_button = QPushButton("View Images")
         view_images_button.setFixedWidth(200)
         view_images_button.setFixedHeight(50)
-        view_images_button.clicked.connect(cycle_button_module)
+        view_images_button.clicked.connect(cycle_module_button)
 
 
         found_matches = QLabel("Links found...")
@@ -142,8 +138,7 @@ class MainWindow(QMainWindow):
 
         # map (Spyder's path) display
 
-        # moving on to .NET's MAUI. Hopefully will be more platform pliable. Easily installed, as well as look good. ## Total bullshit, .NET's MAUI provides a layer between OS's. You'll get roughly the same with pyQt. 
-        # And, anyone using this kind of app can easily install Python on their own
+        # moving on to .NET's MAUI. Hopefully will be more platform pliable. Easily installed, as well as looks good.
 
    
 def capture_links(wikipedia_url):
@@ -190,10 +185,6 @@ def get_images():
         Output.setText(img_link) 
 
 
-# wikipedia_url = input("Enter a wikipedia search result...\n\n")
-# external_links = get_external_links(wikipedia_url)
-
-
 def spyder_1st_run(self):
 
     capture_links(wikipedia_url)
@@ -204,7 +195,7 @@ def spyder_infinite():
     pass
     #   infinite or let the user decide?
 
-def cycle_button_module():
+def cycle_module_button():
 
     pass
     #   Three modes:
@@ -217,5 +208,4 @@ app.setStyleSheet(Path(os.path.join(basedir, 'wikiSpyder.qss')).read_text())
 window.show()
 app.exec()
 
-    # moving on to .NET's MAUI. Hopefully will be more platform pliable. Easily installed, as well as look good. ## Total bullshit, .NET's MAUI provides a layer between OS's. You'll get roughly the same with pyQt. 
-    # And, anyone using this kind of app can easily install Python on their own
+launch()
