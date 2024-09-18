@@ -207,5 +207,3 @@ app.setStyleSheet(Path(os.path.join(basedir, 'wikiSpyder.qss')).read_text())
 
 window.show()
 app.exec()
-
-launch()
