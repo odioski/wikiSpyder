@@ -9,7 +9,7 @@ What it will do is scrape the REFERENCES section posted last in most Wikipedia s
 While on the hunt, it will search for user provided search terms, keep a tally of how many times the search terms was found on the landing page of each link, notify the user of which page each search terms was found, and list how many times a search terms was found per visited URL.
 
 It can speed up the search process considerably for working professionals or anyone who may know precisely what information they are looking for if the information (search terms) is linked or appears on the landing page of the targeted URLs.
-From there the user can peruse an additional manifest of links annotated with a count of how many times a search terms(s) was found per link along with the tallied search term.
+From there the user can peruse an additional manifest of links annotated with a count of how many times each search terms(s) was found per link along with the tallied search term.
 If you like, wikiSpyder will continue to crawl until you've narrowed down the site with the information you were looking for.
 
     - Sites where no search termss were found, or anomalies where the landing page is mostly video or audio presentations are marked as NULL. They can still be accessed manually for eyes-on investigations. Just click the highlighted link to explore with your browser.
