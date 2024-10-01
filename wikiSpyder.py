@@ -139,6 +139,8 @@ class MainWindow(QMainWindow):
         # map (Spyder's path) display
 
         # moving on to .NET's MAUI. Hopefully will be more platform pliable. Easily installed, as well as looks good.
+        # Total bullshit though. You can install python if you use a desktop for such an app as this. And you might have to install 
+        # .NET OR PYTHON either way if our installer can't add those for you with the app.
 
    
 def capture_links(wikipedia_url):
