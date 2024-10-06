@@ -1,5 +1,10 @@
 QLabel#nfo  {
-    background-color: black;
     color: red;
+    background-color: black;
     border: 1px solid white;
+    
+    href    {
+    text-align: left;
+    color: white;
+    }
 }

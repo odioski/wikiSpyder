@@ -10,9 +10,10 @@ from bs4 import BeautifulSoup
 from pathlib import Path
 
 from PyQt6.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool
-from PyQt6.QtGui import QIcon, QPixmap
+from PyQt6.QtGui import QIcon, QPixmap, QPalette, QColor, QBrush
 from PyQt6.QtWidgets import (QApplication, QCheckBox, QLabel, QLineEdit,
-                             QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QWidget)
+                             QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QScrollArea, QScrollBar,
+                             QBoxLayout, QWidget, QAbstractSlider)
 
 #pyQt
 
@@ -32,7 +33,7 @@ class MainWindow(QMainWindow):
         global wikipedia_url
         
         if text == "":
-            Output.setText("Please fill in the form...")
+            output.setText("Please fill in the form...")
         else:
             subject = text
             wikipedia_url = (f'https://wikipedia.org/wiki/{subject}')
@@ -46,7 +47,7 @@ class MainWindow(QMainWindow):
         search_terms = []
 
         if search_terms == "":
-            Output.setText("Please add some search terms")
+            output.setText("Please add some search terms")
         else:
             search_terms = text
 
@@ -91,18 +92,20 @@ class MainWindow(QMainWindow):
 
         found_matches = QLabel("Links found...")
         found_matches.setAlignment(Qt.AlignmentFlag.AlignCenter)
-      
-        global Output
 
-        Output = QLabel("Output will be displayed here...")
-        Output.setObjectName("nfo")
-        Output.setFixedHeight(250)
-        Output.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        Output.setWordWrap(True)
+        global output        
+
+        output = QLabel("output will be displayed here...")
+        output.setObjectName("nfo")
+        output.setMinimumHeight(250)
+        #output.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        #output.setWordWrap(True)        
+  
+        scroll_area = QScrollArea()
+        scroll_area.setWidget(output)
         
         # first layer display...
 
-        layout_z_0 = QVBoxLayout()
 
         title_panel = QVBoxLayout()
 
@@ -116,21 +119,24 @@ class MainWindow(QMainWindow):
         input_panel.addWidget(search_term_inputs)
 
         control_panel = QHBoxLayout()
+
         control_panel.addWidget(launchButton)
         control_panel.addWidget(deep_probe_button)
         control_panel.addWidget(view_images_button)
 
+        layout_z_0 = QVBoxLayout()
+
         layout_z_0.addLayout(title_panel)
         layout_z_0.addLayout(input_panel)
         layout_z_0.addWidget(found_matches)
-        layout_z_0.addWidget(Output)
+        layout_z_0.addWidget(output)
         layout_z_0.addLayout(control_panel)
 
         app_container = QWidget()
         app_container.setLayout(layout_z_0)
 
         self.setCentralWidget(app_container)
-        self.setFixedSize(600, 600)
+        self.setFixedSize(1200, 600)
 
         # image display
 
@@ -138,9 +144,7 @@ class MainWindow(QMainWindow):
 
         # map (Spyder's path) display
 
-        # moving on to .NET's MAUI. Hopefully will be more platform pliable. Easily installed, as well as looks good.
-        # Total bullshit though. You can install python if you use a desktop for such an app as this. And you might have to install 
-        # .NET OR PYTHON either way if our installer can't add those for you with the app.
+        # Actually, would like to see if Copiot or Chat-GPT can port this to .NET OR MAUI...
 
    
 def capture_links(wikipedia_url):
@@ -153,9 +157,10 @@ def capture_links(wikipedia_url):
 
     for ref in soup.find_all('span', class_='reference-text'):
         for link in ref.find_all('a', class_='external text', href=True):
-            external_links.append(link['href'])
-            newData = external_links[0]
-            Output.setText(newData)
+            external_links.append(link['href'] + "<br/>")
+            
+    newData = str(external_links)
+    output.setText(newData)
     return external_links
 
 def capture_images(external_links):
@@ -170,7 +175,7 @@ def capture_images(external_links):
         for img in soup.find_all('img', src=True):
             image_link.append(img['src'])
 
-            Output.setText(image_link)    
+            output.setText(image_link)    
         
     except requests.exceptions.RequestException as e:
         print(f"Error accessing {external_links} : {e}")
@@ -184,7 +189,7 @@ def get_images():
         img_link = re.match(r'[\b.webp]+[\b.gif]+[b\.jpeg]+[b\.jpg]+[\b.png]', img)
         # regex to match and pick relevant images.
 
-        Output.setText(img_link) 
+        output.setText(img_link) 
 
 
 def spyder_1st_run(self):
@@ -197,11 +202,13 @@ def spyder_infinite():
     pass
     #   infinite or let the user decide?
 
+
 def cycle_module_button():
 
     pass
     #   Three modes:
     #   sums (hits per search term per external link), Spyder's path, and view images
+
 
 window = MainWindow()
 
