@@ -10,9 +10,9 @@ from bs4 import BeautifulSoup
 from pathlib import Path
 
 from PyQt6.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool
-from PyQt6.QtGui import QIcon, QPixmap, QPalette, QColor, QBrush
+from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import (QApplication, QCheckBox, QLabel, QLineEdit,
-                             QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QScrollArea, QScrollBar,
+                             QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QScrollArea,
                              QBoxLayout, QWidget, QAbstractSlider)
 
 #pyQt
@@ -97,12 +97,13 @@ class MainWindow(QMainWindow):
 
         output = QLabel("output will be displayed here...")
         output.setObjectName("nfo")
-        output.setMinimumHeight(250)
-        #output.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        #output.setWordWrap(True)        
+        output.setFixedWidth(1000)
+        output.setWordWrap(True)                
   
         scroll_area = QScrollArea()
         scroll_area.setWidget(output)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # first layer display...
 
@@ -129,7 +130,7 @@ class MainWindow(QMainWindow):
         layout_z_0.addLayout(title_panel)
         layout_z_0.addLayout(input_panel)
         layout_z_0.addWidget(found_matches)
-        layout_z_0.addWidget(output)
+        layout_z_0.addWidget(scroll_area)
         layout_z_0.addLayout(control_panel)
 
         app_container = QWidget()
@@ -158,9 +159,10 @@ def capture_links(wikipedia_url):
     for ref in soup.find_all('span', class_='reference-text'):
         for link in ref.find_all('a', class_='external text', href=True):
             external_links.append(link['href'] + "<br/>")
-            
+    
     newData = str(external_links)
     output.setText(newData)
+    
     return external_links
 
 def capture_images(external_links):
