@@ -233,7 +233,7 @@ class MainWindow(QMainWindow):
         links = text.split("\n")
         formatted_links = []
         for link in links:
-            formatted_links.append(f'<a href="{link}" style="color: blue; text-decoration: underline;">{link}</a>')
+            formatted_links.append(f'<a href="{link}" style="color: yellow; text-decoration: underline;">{link}</a>')
         return "<br/>".join(formatted_links)
 
 if __name__ == "__main__":
@@ -241,4 +241,3 @@ if __name__ == "__main__":
     window.show()
     app.exec()
 
-    
