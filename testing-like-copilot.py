@@ -46,6 +46,9 @@ class MainWindow(QMainWindow):
 
         search_term_label = QLabel("Search terms")
         search_term_inputs = QLineEdit()
+        search_term_inputs.setAcceptDrops(True)
+        search_term_inputs.dragEnterEvent = self.dragEnterEvent
+        search_term_inputs.dropEvent = self.dropEvent
         search_term_inputs.setPlaceholderText("TYPE or DROP your search terms here; use csv or txt file if it's a long list")
         search_term_inputs.textChanged.connect(self.disco_terms)
 
