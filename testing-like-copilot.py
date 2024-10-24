@@ -1,5 +1,6 @@
 import requests
 import os
+import time
 import re
 from bs4 import BeautifulSoup
 from pathlib import Path
@@ -134,12 +135,12 @@ class MainWindow(QMainWindow):
     def spyder_infinite(self):
         self.is_deep_probing = not self.is_deep_probing
         if self.is_deep_probing:
-            output.setText("Launching deep probe...")
+            output.setText("Deep probe launched")
             self.deep_probe_button.setText("Pause Deep Probe")
             result = self.deep_scrape_wikipedia(found_links, search_terms)
             deep_probe_output.setText(self.format_links(result))  # Format links for display
-            output.setText("")  # Clear previous output
-            deep_probe_output.setText("")
+            time.sleep(2)  # Pause for 5 seconds
+            deep_probe_output.setText("")  # Clear previous output
         else:
             output.setText("Deep probe paused.")
             self.deep_probe_button.setText("Resume Deep Probe")
@@ -188,11 +189,11 @@ class MainWindow(QMainWindow):
         except Exception as e:
             return f"An error occurred: {str(e)}"
 
-    def deep_scrape_wikipedia(self, links, search_terms):
+    def deep_scrape_wikipedia(self, found_links, search_terms):
         try:
             base_url = "https://en.wikipedia.org"
             matched_links = []
-            for sub_url in links:
+            for sub_url in found_links:
                 if sub_url.startswith("#"):
                     # Skip internal page references
                     continue
@@ -204,14 +205,17 @@ class MainWindow(QMainWindow):
                 for sub_link in sub_links:
                     href = sub_link['href']
                     if href.startswith("#"):
+                        deep_probe_output.setText(f"Skipping internal link: {href}, temp. void.")
                         # Skip internal page references
                         continue
                     if href.startswith("/"):
                         href = f"{base_url}{href}"
                     if any(term in sub_link.get_text() for term in search_terms):
+                        deep_probe_output.setText(f"Found matching link: {href}")
                         matched_links.append(href)
-            return "\n".join(matched_links) if matched_links else "No matching links found in deep probe."
+            deep_probe_output.setText("\n".join(matched_links) if matched_links else "No matching links found in deep probe.")
         except Exception as e:
+            deep_probe_output.setText(f"An error occurred: {str(e)}")
             return f"An error occurred: {str(e)}"
 
     def view_images(self, url):
