@@ -26,8 +26,7 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
 
 # Gifts
 
-If you'd like to buy me a cup of coffee that would be very kind of you, but anything more will be donated to the Wikipedia Foundation for now.
+If you'd like to buy me a cup of coffee that would be very kind of you.
 
 Donations are accepted here:    PAYPAL  |   If you'd like to remain TOTALLY anonymous it's completely UNDERSTOOD by me. Such proceeds are accepted here:  BITCOIN WALLET
 
-If you would like to see additional features added or have a suggestion, you can send me a note: score+0@bookmotives.com
