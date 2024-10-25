@@ -30,3 +30,4 @@ If you'd like to buy me a cup of coffee that would be very kind of you.
 
 Donations are accepted here:    PAYPAL  |   If you'd like to remain TOTALLY anonymous it's completely UNDERSTOOD by me. Such proceeds are accepted here:  BITCOIN WALLET
 
+If you would like to see additional features added or have a suggestion, you can send me a note: score+@bookmotives.com
