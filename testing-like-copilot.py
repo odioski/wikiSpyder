@@ -30,7 +30,7 @@ class MainWindow(QMainWindow):
 
     def disco_terms(self, text):
         global search_terms
-        search_terms = text.split(',') if text else []
+        search_terms = text.split(" ") if text else []
 
     def __init__(self):
         super().__init__()
@@ -68,8 +68,12 @@ class MainWindow(QMainWindow):
         view_images_button.setFixedHeight(50)
         view_images_button.clicked.connect(self.cycle_module_button)
 
-        found_matches = QLabel("Links found...")
+        found_matches = QLabel("Results will be displayed here...")
         found_matches.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        output_banner_left = QLabel("LINKS FOUND:")
+        output_banner_right = QLabel("MISC. OUTPUT:")
+        #how to get these centered above their respective outputs?
 
         global output        
         output = QLabel("output will be displayed here...")
@@ -110,10 +114,16 @@ class MainWindow(QMainWindow):
         output_layout.addWidget(scroll_area)
         output_layout.addWidget(deep_probe_output)
 
+        output_banner = QHBoxLayout()
+        output_banner.addWidget(output_banner_left)
+        output_banner.addStretch()
+        output_banner.addWidget(output_banner_right)
+
         layout_z_0 = QVBoxLayout()
         layout_z_0.addLayout(title_panel)
         layout_z_0.addLayout(input_panel)
         layout_z_0.addWidget(found_matches)
+        layout_z_0.addLayout(output_banner)
         layout_z_0.addLayout(output_layout)
         layout_z_0.addLayout(control_panel)
 
@@ -241,10 +251,9 @@ class MainWindow(QMainWindow):
         formatted_links = []
         for link in links:
             formatted_links.append(f'<a href="{link}" style="color: yellow; text-decoration: underline;">{link}</a>')
-        return "<br/>".join(formatted_links)
+        return f'<h2>LINKS FOUND:</h2><h4>Click to visit or add/remove keywords</h4><br/>{"<br/>".join(formatted_links)}'
 
 if __name__ == "__main__":
     window = MainWindow()
     window.show()
     app.exec()
-
