@@ -10,8 +10,9 @@ from PyQt6.QtWidgets import (QApplication, QCheckBox, QLabel, QLineEdit,
                              QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QScrollArea,
                              QBoxLayout, QWidget, QAbstractSlider, QDialog, QVBoxLayout, QLabel)
 
-global newData, found_links, search_terms
-search_terms = "NIL"
+global found_links, search_terms, wikipedia_url
+search_terms = []
+wikipedia_url = ""
 
 basedir = os.path.dirname(__file__)
 
@@ -40,6 +41,9 @@ class MainWindow(QMainWindow):
         logo.setPixmap(QPixmap(os.path.join(basedir, "logo.png")))
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
+############################# SLOTS ########################################/
+
+
         subject_label = QLabel("Subject")
         subject_url = QLineEdit()
         subject_url.setPlaceholderText("wikipedia.org/wiki/YourFavoriteStar")
@@ -68,12 +72,15 @@ class MainWindow(QMainWindow):
         view_images_button.setFixedHeight(50)
         view_images_button.clicked.connect(self.cycle_module_button)
 
-        found_matches = QLabel("Results will be displayed here...")
-        found_matches.setAlignment(Qt.AlignmentFlag.AlignCenter)
+############################# OUTPUT PANELS ################################/
 
-        output_banner_left = QLabel("LINKS FOUND:")
-        output_banner_right = QLabel("MISC. OUTPUT:")
-        #how to get these centered above their respective outputs?
+
+        # self.flash_stacked_widget = QStackedWidget()
+        # self.flash_stacked_widget.setBackgroundRole(QPixmap(os.path.join(basedir, "flash.jpg")))
+        # self.flash_stacked_widget.setCurrentIndex(1)
+
+        wiki_spyder = QLabel("wikiSpyder 0.1.9")
+        wiki_spyder.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         global output        
         output = QLabel("output will be displayed here...")
@@ -81,6 +88,12 @@ class MainWindow(QMainWindow):
         output.setFixedWidth(1000)
         output.setWordWrap(True)                
         output.setOpenExternalLinks(True)  # Enable clickable links
+
+        output_scroll_area = QScrollArea()
+        output_scroll_area.setWidget(output)
+        output_scroll_area.setWidgetResizable(True)
+        output_scroll_area.setMinimumHeight(300)
+        output_scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Create deep_probe_output and nest it inside output
         global deep_probe_output
@@ -90,11 +103,12 @@ class MainWindow(QMainWindow):
         deep_probe_output.setStyleSheet("border: 1px solid white;")
         deep_probe_output.setWordWrap(True)
         deep_probe_output.setOpenExternalLinks(True)
-  
-        scroll_area = QScrollArea()
-        scroll_area.setWidget(output)
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        deep_probe_output_scroll_area = QScrollArea()
+        deep_probe_output_scroll_area.setWidget(deep_probe_output)
+        deep_probe_output_scroll_area.setWidgetResizable(True)
+        deep_probe_output_scroll_area.setMinimumHeight(output_scroll_area.height())
+        deep_probe_output_scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         title_panel = QVBoxLayout()
         title_panel.addWidget(logo)
@@ -106,31 +120,60 @@ class MainWindow(QMainWindow):
         input_panel.addWidget(search_term_inputs)
 
         control_panel = QHBoxLayout()
+        control_panel.addSpacing(20)
         control_panel.addWidget(launchButton)
         control_panel.addWidget(self.deep_probe_button)
         control_panel.addWidget(view_images_button)
 
-        output_layout = QHBoxLayout()
-        output_layout.addWidget(scroll_area)
-        output_layout.addWidget(deep_probe_output)
+        output_banner_left = QLabel("LINKS FOUND:")
+        output_banner_right = QLabel("MISC. OUTPUT:")
+        #how to get these centered above their respective outputs?
 
         output_banner = QHBoxLayout()
         output_banner.addWidget(output_banner_left)
         output_banner.addStretch()
         output_banner.addWidget(output_banner_right)
 
+        output_layout = QHBoxLayout()
+        output_layout.addWidget(output_scroll_area)
+        output_layout.addWidget(deep_probe_output)
+
+        tally_output = QLabel()
+        tally_output.setObjectName("tally_output")
+        tally_output.setFixedWidth(1000)
+        tally_output.setWordWrap(True)
+        tally_output.setOpenExternalLinks(True)
+        tally_output.setText("TALLY: 0")
+
+        tally_scroll_area = QScrollArea()
+        tally_scroll_area.setWidget(tally_output)
+        tally_scroll_area.setWidgetResizable(True)
+        tally_scroll_area.setMinimumHeight(50)
+        tally_scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        tally_layout = QVBoxLayout()
+        tally_layout.addWidget(tally_scroll_area)
+        
+
         layout_z_0 = QVBoxLayout()
         layout_z_0.addLayout(title_panel)
         layout_z_0.addLayout(input_panel)
-        layout_z_0.addWidget(found_matches)
-        layout_z_0.addLayout(output_banner)
+        layout_z_0.addSpacing(20)
+        layout_z_0.addWidget(wiki_spyder)
+        layout_z_0.addSpacing(20)
+        #layout_z_0.addLayout(output_banner)
         layout_z_0.addLayout(output_layout)
+        layout_z_0.addSpacing(20)
         layout_z_0.addLayout(control_panel)
+        layout_z_0.addSpacing(20)
+        layout_z_0.addLayout(tally_layout)
 
         app_container = QWidget()
         app_container.setLayout(layout_z_0)
         self.setCentralWidget(app_container)
-        self.setFixedSize(1200, 600)
+        self.setFixedSize(1200, 700)
+
+############################# METHODS ########################################/
 
     def spyder_1st_run(self):
         if wikipedia_url:
