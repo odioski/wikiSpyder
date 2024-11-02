@@ -11,7 +11,7 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (QApplication, QLabel, QLineEdit, QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QScrollArea, QWidget, QDialog)
 
 basedir = os.path.dirname(__file__)
-img_dir = "saved_images"
+img_dir = "./saved_images"
 os.makedirs(img_dir, exist_ok=True)
 
 class GlobalState:
