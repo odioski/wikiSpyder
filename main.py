@@ -124,6 +124,7 @@ class MainWindow(QMainWindow):
         # deep_probe_output_scroll_area.setWidgetResizable(True)
         # deep_probe_output_scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)    
 
+
         return output_scroll_area, deep_probe_output
 
     def create_tally_area(self):
@@ -234,6 +235,7 @@ class MainWindow(QMainWindow):
     #         deep_probe_output.setText(f"An error occurred: {str(e)}")
     #         return f"An error occurred: {str(e)}"
 
+
     def find_images(self, urls):
         print(f'{urls}\n\n')
         try:
@@ -315,3 +317,4 @@ if __name__ == "__main__":
     window = MainWindow()
     window.show()
     app.exec()
+
