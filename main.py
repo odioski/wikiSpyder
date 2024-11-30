@@ -128,6 +128,7 @@ class MainWindow(QMainWindow):
         return output_scroll_area, deep_probe_output
 
     def create_tally_area(self):
+        global tally_output
         tally_output = QLabel()
         tally_output.setObjectName("tally_output")
         tally_output.setFixedWidth(1000)
@@ -204,6 +205,7 @@ class MainWindow(QMainWindow):
                 return "\n".join(fixed_links)
 
             global_state.matched_links = [link for link in fixed_links if any(term in link for term in search_terms)]
+            tally_output.setText(self.tally_links(global_state.matched_links))    
             return "\n".join(global_state.matched_links) if global_state.matched_links else "No matching links found in references."
         except Exception as e:
             return f"An error occurred: {str(e)}"
@@ -310,7 +312,13 @@ class MainWindow(QMainWindow):
         links = text.split("\n")
         formatted_links = [f'<a href="{link}" style="color: yellow; text-decoration: underline;">{link}</a>' for link in links]
         return f'<h2>LINKS FOUND:</h2><h4>Click to visit or add/remove keywords</h4><br/>{"<br/>".join(formatted_links)}'
-
+    
+    def tally(global_state, text):
+        global_state.matched_links = text.split("\n")
+        return f'TALLY: Matched Links = {len(global_state.matched_links)} </br> <h2>LINKS FOUND:</h2><h4>Click to visit or add/remove keywords</h4><br/>{"<br/>".join(global_state.matched_links)}'
+        global_state.image_urls = text.split("\n")
+        return f'TALLY: Images Found = {len(global_state.image_urls)} /br <h2>IMAGES FOUND:</h2><h4>Click to view images</h4><br/>{"<br/>".join(global_state.image_urls)}'  
+    
 if __name__ == "__main__":
     app = QApplication([])
     app.setStyle("Fusion")
@@ -318,3 +326,4 @@ if __name__ == "__main__":
     window.show()
     app.exec()
 
+    
