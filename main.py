@@ -173,6 +173,7 @@ class MainWindow(QMainWindow):
             result = self.scrape_wikipedia_references(global_state.wikipedia_url, global_state.search_terms)
             global_state.found_links = result.split("\n") if result else []
             output.setText(self.format_links(result))
+            tally_output.setText(self.tally_links(global_state.matched_links))    
         else:
             output.setText("No subject URL found...")
 
@@ -205,7 +206,6 @@ class MainWindow(QMainWindow):
                 return "\n".join(fixed_links)
 
             global_state.matched_links = [link for link in fixed_links if any(term in link for term in search_terms)]
-            tally_output.setText(self.tally_links(global_state.matched_links))    
             return "\n".join(global_state.matched_links) if global_state.matched_links else "No matching links found in references."
         except Exception as e:
             return f"An error occurred: {str(e)}"
@@ -311,13 +311,12 @@ class MainWindow(QMainWindow):
     def format_links(self, text):
         links = text.split("\n")
         formatted_links = [f'<a href="{link}" style="color: yellow; text-decoration: underline;">{link}</a>' for link in links]
+        self.tally_links(global_state, text)
         return f'<h2>LINKS FOUND:</h2><h4>Click to visit or add/remove keywords</h4><br/>{"<br/>".join(formatted_links)}'
     
-    def tally(global_state, text):
+    def tally_links(global_state, text):
         global_state.matched_links = text.split("\n")
-        return f'TALLY: Matched Links = {len(global_state.matched_links)} </br> <h2>LINKS FOUND:</h2><h4>Click to visit or add/remove keywords</h4><br/>{"<br/>".join(global_state.matched_links)}'
-        global_state.image_urls = text.split("\n")
-        return f'TALLY: Images Found = {len(global_state.image_urls)} /br <h2>IMAGES FOUND:</h2><h4>Click to view images</h4><br/>{"<br/>".join(global_state.image_urls)}'  
+        return f'TALLY: Matched Links = {len(global_state.matched_links)} </br> <h2>LINKS FOUND:</h2><h4>Click to visit or add/remove keywords</h4><br/>{"<br/>".join(global_state.matched_links)}/nTALLY: Images Found = {len(global_state.image_urls)} /br <h2>IMAGES FOUND:</h2><h4>Click to view images</h4><br/>{"<br/>".join(global_state.image_urls)}'  
     
 if __name__ == "__main__":
     app = QApplication([])
