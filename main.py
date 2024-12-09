@@ -1,5 +1,6 @@
 import re
 import os
+import shutil
 import time
 import requests
 from bs4 import BeautifulSoup
@@ -11,7 +12,8 @@ from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (QApplication, QLabel, QLineEdit, QMainWindow, QPushButton, QVBoxLayout, QHBoxLayout, QScrollArea, QWidget, QDialog)
 
 basedir = os.path.dirname(__file__)
-img_dir = "./saved_images"
+global img_dir
+img_dir = "saved_images"
 os.makedirs(img_dir, exist_ok=True)
 
 class GlobalState:
@@ -23,6 +25,8 @@ class GlobalState:
         self.images = []
         self.image_urls = []
         self.messages = []
+        self.matched_links = []
+
 
 global_state = GlobalState()
 
@@ -76,7 +80,7 @@ class MainWindow(QMainWindow):
         return subject_label, subject_url
 
     def create_search_term_input(self):
-        search_term_label = QLabel("Search terms")
+        search_term_label = QLabel("Search Terms")
         search_term_inputs = QLineEdit()
         search_term_inputs.setPlaceholderText("TYPE or DROP your search terms here; use csv or txt file if it's a long list")
         search_term_inputs.textChanged.connect(self.disco_terms)
@@ -167,6 +171,13 @@ class MainWindow(QMainWindow):
     def disco_terms(self, text):
         global_state.search_terms = text.split(" ") if text else []
 
+    def cleanup_images(self):
+        try:
+            shutil.rmtree(img_dir)
+        except Exception as e:
+            print(f"Error removing image {img_dir}: {e}")
+        global_state.images.clear()
+
     def spyder_1st_run(self):
         output.setText("Launching spider...")
         if global_state.wikipedia_url:
@@ -241,31 +252,30 @@ class MainWindow(QMainWindow):
     def find_images(self, urls):
         print(f'{urls}\n\n')
         try:
-            #base_url = "https://en.wikipedia.org"
             for url in urls:
                 response = requests.get(url)
                 soup = BeautifulSoup(response.text, 'html.parser')
-                image_tags = soup.find_all('img', src=True) 
+                image_tags = soup.find_all('img', src=True)
                 print(f'{image_tags}\n\n')
-                for src in image_tags:
-                    src = src['src']
+                for img_tag in image_tags:
+                    src = img_tag['src']
                     link = re.search(r'(https?://[^\s]+\.(jpg|jpeg|png|gif))', src)
-                    if link == "None" or link is None:
-                        global_state.messages.append(f"Skipping non-image link: {src} = {link}")
-                        #deep_probe_output.setText(f'Skipping non-image link: {src} = {link}')
-                        print(f"Skipping non-image link: {src} = {link} ***********\n\n\n")
+                    if link is None:
+                        global_state.messages.append(f"Skipping non-image link: {src}")
+                        print(f"Skipping non-image link: {src} ***********\n\n\n")
                     else:
-                        #new_link = (f'{base_url}{new_src}')
                         print(f'link = {link.group(1)}')
                         print(f'adding image url to image_urls list: {link.group(1)}')
-                        deep_probe_output.setText(f"Probing for images from: {link.group(1)}") 
+                        deep_probe_output.setText(f"Probing for images from: {link.group(1)}")
                         global_state.image_urls.append(link.group(1))
                         print("Next..**************\n")
 
-                deep_probe_output.setText(f"Found {len(global_state.image_urls)} images from: {url}\n{global_state.image_urls}\nReady to view...")
+                formatted_image_links = [f'<a href="{link}" style="color: yellow; text-decoration: underline;">{link}</a>' for link in global_state.image_urls]
+                deep_probe_output.setText(f'<h5>Found {len(global_state.image_urls)} images from:</h5>{url}<br/>{"<br/>".join(formatted_image_links)}<h6>Ready to view...</h6>')
                 time.sleep(5)
 
                 if global_state.image_urls:
+                    print(f'Found {len(global_state.image_urls)} images\n**************')
                     print(f'{global_state.image_urls}\n\n')
                     for img_url in global_state.image_urls:
                         global_state.messages.append(img_url)
@@ -273,51 +283,155 @@ class MainWindow(QMainWindow):
                         img = Image.open(BytesIO(img_response.content))
                         try:
                             img.verify()
-                            global_state.images.append(img)
                             image_name = os.path.basename(img_url)
                             output_path = os.path.join(img_dir, image_name)
+                            img = Image.open(BytesIO(img_response.content))  # Reopen the image
                             img.save(output_path)
+                            global_state.images.append(output_path)
                         except (IOError, SyntaxError) as e:
                             print(f"Skipping invalid image: {img_url} - {e}")
                     output.setText("\n".join(global_state.messages))
                 else:
                     deep_probe_output.setText(f'{global_state.messages}\n\n')
-                return global_state.image_urls
+                global_state.image_urls.clear()  # Clear image URLs after processing each URL
+            return global_state.image_urls
         except Exception as e:
             output.setText(f"An error occurred: {str(e)}")
             print(f"An error occurred: {str(e)}")
         return []
+    
+    class ImageDialog(QDialog):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.parent = parent
+
+    def closeEvent(self, event):
+        self.parent.cleanup_images(event)
+        event.accept()  # Accept the close event to proceed with closing
 
     def view_images_button(self):
+        image_dialog = self.ImageDialog()
+        image_dialog.setWindowTitle("Image Viewer")
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        dialog_widget = QWidget()
+        dialog_layout = QHBoxLayout(dialog_widget)
+        row_layout = QVBoxLayout()
+        row = QHBoxLayout()
+        count = 0
+
+        for img_path in global_state.images:
+            img_label = QLabel()
+            img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            img_label.setFixedSize(200, 200)
+            img_label.setStyleSheet("border: 1px solid white;")
+            pixmap = QPixmap(img_path)
+            img_label.setPixmap(pixmap.scaled(img_label.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            row.addWidget(img_label)
+            count += 1
+            if count % 5 == 0:
+                row_layout.addLayout(row)
+            row = QHBoxLayout()
+
+        if count % 5 != 0:
+            row_layout.addLayout(row)
+        dialog_layout.addLayout(row_layout)
+        dialog_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        scroll_area.setWidget(dialog_widget)
+        image_dialog_layout = QVBoxLayout(image_dialog)
+        image_dialog_layout.addWidget(scroll_area)
+        image_dialog.setLayout(image_dialog_layout)
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        dialog_widget = QWidget()
+        dialog_layout = QHBoxLayout(dialog_widget)
+        row_layout = QVBoxLayout()
+        row = QHBoxLayout()
+        count = 0
+
+        for img_path in global_state.images:
+            img_label = QLabel()
+            img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            img_label.setFixedSize(200, 200)
+            img_label.setStyleSheet("border: 1px solid white;")
+            pixmap = QPixmap(img_path)
+            img_label.setPixmap(pixmap.scaled(img_label.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            row.addWidget(img_label)
+            count += 1
+            if count % 5 == 0:
+                row_layout.addLayout(row)
+            row = QHBoxLayout()
+
+        if count % 5 != 0:
+            row_layout.addLayout(row)
+        dialog_layout.addLayout(row_layout)
+        dialog_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        scroll_area.setWidget(dialog_widget)
+        image_dialog_layout = QVBoxLayout(image_dialog)
+        image_dialog_layout.addWidget(scroll_area)
+        image_dialog.setLayout(image_dialog_layout)
+
+        global_state.images.clear()
+        global_state.image_urls = []
+        global_state.images = []
+        image_dialog.exec()
         output.setText("Launching image viewer...")
         self.find_images(global_state.matched_links)
-        image_dialog = QDialog(self)
+        image_dialog = self.ImageDialog()
         image_dialog.setWindowTitle("Image Viewer")
 
-        dialog_layout = QVBoxLayout()
+        dialog_layout = QHBoxLayout()
+        row_layout = QVBoxLayout()
+        row = QHBoxLayout()
+        count = 0
 
-        if global_state.image_urls:
-            for img in global_state.images:
-                img_label = QLabel()
-                qimage = ImageQt.ImageQt(img)
-                pixmap = QPixmap.fromImage(qimage)
-                img_label.setPixmap(pixmap)
-                dialog_layout.addWidget(img_label)
-                image_dialog.setLayout(dialog_layout)
-                image_dialog.exec()
-        else:
-            output.setText("No images found...")
+        for img_path in global_state.images:
+            img_label = QLabel()
+            img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            img_label.setFixedSize(200, 200)
+            img_label.setStyleSheet("border: 1px solid white;")
+            pixmap = QPixmap(img_path)
+            img_label.setPixmap(pixmap.scaled(img_label.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            row.addWidget(img_label)
+            count += 1
+            if count % 5 == 0:
+                row_layout.addLayout(row)
+                row = QHBoxLayout()
+
+        if count % 5 != 0:
+            row_layout.addLayout(row)
+        dialog_layout.addLayout(row_layout)
+        dialog_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        image_dialog.setLayout(dialog_layout)
+        global_state.images.clear()
+        global_state.image_urls = []
+        global_state.images = []
+        image_dialog.exec()
+
+
+    def closeEvent(self, event):
+        # Purge images when the app exits
+        self.cleanup_images()
+        event.accept()
 
     def format_links(self, text):
         links = text.split("\n")
         formatted_links = [f'<a href="{link}" style="color: yellow; text-decoration: underline;">{link}</a>' for link in links]
-        self.tally_links(global_state, text)
-        return f'<h2>LINKS FOUND:</h2><h4>Click to visit or add/remove keywords</h4><br/>{"<br/>".join(formatted_links)}'
+        self.tally_links(global_state.matched_links)
+        return f'<h2>LINKS FOUND:</h2><h4>Click to visit or add/remove search terms</h4><br/>{"<br/>".join(formatted_links)}'
     
-    def tally_links(global_state, text):
-        global_state.matched_links = text.split("\n")
-        return f'TALLY: Matched Links = {len(global_state.matched_links)} </br> <h2>LINKS FOUND:</h2><h4>Click to visit or add/remove keywords</h4><br/>{"<br/>".join(global_state.matched_links)}/nTALLY: Images Found = {len(global_state.image_urls)} /br <h2>IMAGES FOUND:</h2><h4>Click to view images</h4><br/>{"<br/>".join(global_state.image_urls)}'  
-    
+    def tally_links(self, text):
+        formatted_matched_links = [f'<a href="{link}" style="color: pink; text-decoration: underline;">{link}</a>' for link in global_state.matched_links]
+        return f'<h2>TALLY: Matched Links = {len(global_state.matched_links)}</h2><br/>{"<br/>".join(formatted_matched_links)}'
+
 if __name__ == "__main__":
     app = QApplication([])
     app.setStyle("Fusion")
