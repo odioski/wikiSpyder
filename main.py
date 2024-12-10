@@ -37,7 +37,7 @@ class MainWindow(QMainWindow):
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("wikiSpyder 0.1.9")
+        self.setWindowTitle("wikiSpyder 0.3.1")
 
         logo = self.create_logo()
         subject_label, subject_url = self.create_subject_input()
@@ -53,7 +53,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(search_term_label)
         layout.addWidget(search_term_inputs)
         layout.addSpacing(20)
-        layout.addWidget(QLabel("wikiSpyder 0.1.9", alignment=Qt.AlignmentFlag.AlignCenter))
+        layout.addWidget(QLabel("wikiSpyder 0.3.10", alignment=Qt.AlignmentFlag.AlignCenter))
         layout.addSpacing(20)
         layout.addLayout(self.create_output_layout(output_scroll_area, deep_probe_output))
         layout.addSpacing(20)
