@@ -37,7 +37,7 @@ class MainWindow(QMainWindow):
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("wikiSpyder 0.3.1")
+        self.setWindowTitle("wikiSpyder 0.2.1")
 
         logo = self.create_logo()
         subject_label, subject_url = self.create_subject_input()
@@ -53,7 +53,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(search_term_label)
         layout.addWidget(search_term_inputs)
         layout.addSpacing(20)
-        layout.addWidget(QLabel("wikiSpyder 0.3.10", alignment=Qt.AlignmentFlag.AlignCenter))
+        layout.addWidget(QLabel("wikiSpyder 0.2.1", alignment=Qt.AlignmentFlag.AlignCenter))
         layout.addSpacing(20)
         layout.addLayout(self.create_output_layout(output_scroll_area, deep_probe_output))
         layout.addSpacing(20)
@@ -93,7 +93,7 @@ class MainWindow(QMainWindow):
 
         self.deep_probe_button = QPushButton("Deep Probe")
         self.deep_probe_button.setFixedSize(200, 50)
-        self.deep_probe_button.clicked.connect(self.spyder_infinite)
+        # self.deep_probe_button.clicked.connect(self.spyder_infinite)
 
         view_images_button = QPushButton("View Images")
         view_images_button.setFixedSize(200, 50)
@@ -164,7 +164,7 @@ class MainWindow(QMainWindow):
 
     def disco_subject(self, text):
         if text:
-            global_state.wikipedia_url = f'https://wikipedia.org/wiki/{text}'
+            global_state.wikipedia_url = f'https://en.wikipedia.org/wiki/{text}'
         else:
             output.setText("Please fill in the form...")
 
@@ -182,44 +182,68 @@ class MainWindow(QMainWindow):
         output.setText("Launching spider...")
         if global_state.wikipedia_url:
             result = self.scrape_wikipedia_references(global_state.wikipedia_url, global_state.search_terms)
-            global_state.found_links = result.split("\n") if result else []
+            # global_state.found_links = result.split("\n") if result else []
             output.setText(self.format_links(result))
             tally_output.setText(self.tally_links(global_state.matched_links))    
         else:
             output.setText("No subject URL found...")
 
-    def spyder_infinite(self):
-        self.is_deep_probing = not self.is_deep_probing
-        if self.is_deep_probing:
-            output.setText("Deep probe launched")
-            self.deep_probe_button.setText("Pause Deep Probe")
-            result = self.deep_scrape_wikipedia(global_state.found_links, global_state.search_terms)
-            deep_probe_output.setText(self.format_links(result))
-            time.sleep(2)
-            deep_probe_output.setText("")
-        else:
-            output.setText("Deep probe paused.")
-            self.deep_probe_button.setText("Resume Deep Probe")
-
+    # def spyder_infinite(self):
+    #     self.is_deep_probing = not self.is_deep_probing
+    #     if self.is_deep_probing:
+    #         output.setText("Deep probe launched")
+    #         self.deep_probe_button.setText("Pause Deep Probe")
+    #         result = self.deep_scrape_wikipedia(global_state.found_links, global_state.search_terms)
+    #         deep_probe_output.setText(self.format_links(result))
+    #         time.sleep(2)
+    #         deep_probe_output.setText("")
+    #     else:
+    #         output.setText("Deep probe paused.")
+    #         self.deep_probe_button.setText("Resume Deep Probe")
     def scrape_wikipedia_references(self, url, search_terms):
         try:
-            base_url = "https://en.wikipedia.org"
-            response = requests.get(url)
-            soup = BeautifulSoup(response.text, 'html.parser')
-            references_section = soup.find('ol', class_='references')
+            response = requests.get(global_state.wikipedia_url)  # Fetch the Wikipedia page
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Print the prettified HTML content
+            print(soup.prettify())
+            print(global_state.wikipedia_url)
+
+
+            # Find the references section
             if not references_section:
-                return "No references section found."
+                references_section = soup.find('div', class_='reflist reflist-columns references-column-width')
+            elif not references_section:
+                    references_section = soup.find('div', class_='reflist')
+            elif not references_section:
+                    references_section = soup.find('ol', class_='references')
+            else:
+                print("No references section found.")
+                return ["No references section found."]
 
-            all_links = references_section.find_all('a', href=True)
-            fixed_links = [f"{base_url}{link['href']}" if link['href'].startswith("/") else link['href'] for link in all_links]
+            # Print the references section for debugging
+            print(references_section.prettify())
+            print(len(references_section))
 
-            if not search_terms or search_terms == "NIL":
-                return "\n".join(fixed_links)
+            # Extract all links from the references section
+            all_links = [link['href'] for link in references_section.find_all('a', href=True)]
+            fixed_links = [link if link.startswith("http") else f"https://en.wikipedia.org{link}" for link in all_links]
 
-            global_state.matched_links = [link for link in fixed_links if any(term in link for term in search_terms)]
-            return "\n".join(global_state.matched_links) if global_state.matched_links else "No matching links found in references."
+            # Print the extracted links for debugging
+            print("Extracted links:", fixed_links)
+
+            if not search_terms:
+                return fixed_links
+
+            # Filter links based on search terms
+            matched_links = [link for link in fixed_links if any(term in link for term in search_terms)]
+            global_state.matched_links = matched_links
+            return matched_links if matched_links else ["No matching links found in references."]
+        except requests.RequestException as e:
+            return [f"An error occurred with the request: {str(e)}"]
         except Exception as e:
-            return f"An error occurred: {str(e)}"
+            return [f"An error occurred: {str(e)}"]
 
     # def deep_scrape_wikipedia(self, found_links, search_terms):
     #     try:
@@ -310,84 +334,17 @@ class MainWindow(QMainWindow):
         event.accept()  # Accept the close event to proceed with closing
 
     def view_images_button(self):
-        image_dialog = self.ImageDialog()
-        image_dialog.setWindowTitle("Image Viewer")
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        dialog_widget = QWidget()
-        dialog_layout = QHBoxLayout(dialog_widget)
-        row_layout = QVBoxLayout()
-        row = QHBoxLayout()
-        count = 0
-
-        for img_path in global_state.images:
-            img_label = QLabel()
-            img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            img_label.setFixedSize(200, 200)
-            img_label.setStyleSheet("border: 1px solid white;")
-            pixmap = QPixmap(img_path)
-            img_label.setPixmap(pixmap.scaled(img_label.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-            row.addWidget(img_label)
-            count += 1
-            if count % 5 == 0:
-                row_layout.addLayout(row)
-            row = QHBoxLayout()
-
-        if count % 5 != 0:
-            row_layout.addLayout(row)
-        dialog_layout.addLayout(row_layout)
-        dialog_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        scroll_area.setWidget(dialog_widget)
-        image_dialog_layout = QVBoxLayout(image_dialog)
-        image_dialog_layout.addWidget(scroll_area)
-        image_dialog.setLayout(image_dialog_layout)
-
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        dialog_widget = QWidget()
-        dialog_layout = QHBoxLayout(dialog_widget)
-        row_layout = QVBoxLayout()
-        row = QHBoxLayout()
-        count = 0
-
-        for img_path in global_state.images:
-            img_label = QLabel()
-            img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            img_label.setFixedSize(200, 200)
-            img_label.setStyleSheet("border: 1px solid white;")
-            pixmap = QPixmap(img_path)
-            img_label.setPixmap(pixmap.scaled(img_label.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-            row.addWidget(img_label)
-            count += 1
-            if count % 5 == 0:
-                row_layout.addLayout(row)
-            row = QHBoxLayout()
-
-        if count % 5 != 0:
-            row_layout.addLayout(row)
-        dialog_layout.addLayout(row_layout)
-        dialog_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        scroll_area.setWidget(dialog_widget)
-        image_dialog_layout = QVBoxLayout(image_dialog)
-        image_dialog_layout.addWidget(scroll_area)
-        image_dialog.setLayout(image_dialog_layout)
-
-        global_state.images.clear()
-        global_state.image_urls = []
-        global_state.images = []
-        image_dialog.exec()
         output.setText("Launching image viewer...")
         self.find_images(global_state.matched_links)
+
         image_dialog = self.ImageDialog()
         image_dialog.setWindowTitle("Image Viewer")
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        dialog_layout = QHBoxLayout()
+        dialog_widget = QWidget()
+        dialog_layout = QHBoxLayout(dialog_widget)
         row_layout = QVBoxLayout()
         row = QHBoxLayout()
         count = 0
@@ -410,10 +367,14 @@ class MainWindow(QMainWindow):
         dialog_layout.addLayout(row_layout)
         dialog_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        image_dialog.setLayout(dialog_layout)
+        scroll_area.setWidget(dialog_widget)
+        image_dialog_layout = QVBoxLayout(image_dialog)
+        image_dialog_layout.addWidget(scroll_area)
+        image_dialog.setLayout(image_dialog_layout)
+
+        image_dialog.setFixedWidth(5 * 200 + 40)  # Set width to fit at least 5 labels
         global_state.images.clear()
         global_state.image_urls = []
-        global_state.images = []
         image_dialog.exec()
 
 
@@ -423,7 +384,7 @@ class MainWindow(QMainWindow):
         event.accept()
 
     def format_links(self, text):
-        links = text.split("\n")
+        links = text if isinstance(text, list) else text.split("\n")
         formatted_links = [f'<a href="{link}" style="color: yellow; text-decoration: underline;">{link}</a>' for link in links]
         self.tally_links(global_state.matched_links)
         return f'<h2>LINKS FOUND:</h2><h4>Click to visit or add/remove search terms</h4><br/>{"<br/>".join(formatted_links)}'
