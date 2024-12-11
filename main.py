@@ -205,22 +205,12 @@ class MainWindow(QMainWindow):
             response = requests.get(global_state.wikipedia_url)  # Fetch the Wikipedia page
             response.raise_for_status()
             soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Print the prettified HTML content
-            print(soup.prettify())
-            print(global_state.wikipedia_url)
-
-
-            # Find the references section
+            references_section = soup.find('ol', class_='references')
             if not references_section:
                 references_section = soup.find('div', class_='reflist reflist-columns references-column-width')
-            elif not references_section:
-                    references_section = soup.find('div', class_='reflist')
-            elif not references_section:
-                    references_section = soup.find('ol', class_='references')
-            else:
-                print("No references section found.")
-                return ["No references section found."]
+                if not references_section:
+                    print("No references section found.")
+                    return ["No references section found."]
 
             # Print the references section for debugging
             print(references_section.prettify())
