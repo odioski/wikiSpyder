@@ -200,6 +200,8 @@ class MainWindow(QMainWindow):
     #     else:
     #         output.setText("Deep probe paused.")
     #         self.deep_probe_button.setText("Resume Deep Probe")
+
+    
     def scrape_wikipedia_references(self, url, search_terms):
         try:
             response = requests.get(global_state.wikipedia_url)  # Fetch the Wikipedia page
