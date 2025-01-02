@@ -180,6 +180,7 @@ class MainWindow(QMainWindow):
 
     def spyder_1st_run(self):
         output.setText("Launching spider...")
+        global result
         if global_state.wikipedia_url:
             result = self.scrape_wikipedia_references(global_state.wikipedia_url, global_state.search_terms)
             # global_state.found_links = result.split("\n") if result else []
@@ -218,12 +219,14 @@ class MainWindow(QMainWindow):
             print(references_section.prettify())
             print(len(references_section))
 
-            # Extract all links from the references section
+            # Extract all links from the references section\
+            global fixed_links
             all_links = [link['href'] for link in references_section.find_all('a', href=True)]
             fixed_links = [link if link.startswith("http") else f"https://en.wikipedia.org{link}" for link in all_links]
 
             # Print the extracted links for debugging
             print("Extracted links:", fixed_links)
+            print(len(fixed_links))
 
             if not search_terms:
                 return fixed_links
@@ -383,7 +386,7 @@ class MainWindow(QMainWindow):
     
     def tally_links(self, text):
         formatted_matched_links = [f'<a href="{link}" style="color: pink; text-decoration: underline;">{link}</a>' for link in global_state.matched_links]
-        return f'<h2>TALLY: Matched Links = {len(global_state.matched_links)}</h2><br/>{"<br/>".join(formatted_matched_links)}'
+        return f'<h2>TALLY: Found Links = {len(fixed_links)} Matched Links = {len(global_state.matched_links)}</h2><br/>{"<br/>".join(formatted_matched_links)}'
 
 if __name__ == "__main__":
     app = QApplication([])
