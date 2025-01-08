@@ -182,6 +182,7 @@ class MainWindow(QMainWindow):
         output.setText("Launching spider...")
         global result
         if global_state.wikipedia_url:
+            global_state.wikipedia_url = global_state.wikipedia_url.replace(" ", "%20")
             result = self.scrape_wikipedia_references(global_state.wikipedia_url, global_state.search_terms)
             # global_state.found_links = result.split("\n") if result else []
             output.setText(self.format_links(result))
