@@ -7,8 +7,8 @@ from bs4 import BeautifulSoup
 from PIL import Image, ImageQt
 from io import BytesIO
 from PIL import ImageQt
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import Qt, QMetaObject, Q_ARG, QUrl, QThreadPool, QRunnable, pyqtSlot
+from PyQt6.QtGui import QPixmap, QDesktopServices
 from PyQt6.QtWidgets import (
     QApplication,
     QLabel,
@@ -21,9 +21,11 @@ from PyQt6.QtWidgets import (
     QWidget,
     QDialog,
 )
+import asyncio
+import aiohttp
+from aiohttp import ClientSession, ClientTimeout, TCPConnector
 
 basedir = os.path.dirname(__file__)
-global img_dir
 img_dir = "saved_images"
 os.makedirs(img_dir, exist_ok=True)
 
@@ -37,7 +39,6 @@ class GlobalState:
         self.images = []
         self.image_urls = []
         self.messages = []
-        self.matched_links = []
 
 
 global_state = GlobalState()
@@ -118,7 +119,6 @@ class MainWindow(QMainWindow):
 
         self.deep_probe_button = QPushButton("Deep Probe")
         self.deep_probe_button.setFixedSize(200, 50)
-        # self.deep_probe_button.clicked.connect(self.spyder_infinite)
 
         view_images_button = QPushButton("View Images")
         view_images_button.setFixedSize(200, 50)
@@ -132,7 +132,7 @@ class MainWindow(QMainWindow):
         output.setObjectName("nfo")
         output.setFixedWidth(1200)
         output.setWordWrap(True)
-        output.setOpenExternalLinks(True)  # Enable clickable links
+        output.setOpenExternalLinks(True)
 
         output_scroll_area = QScrollArea()
         output_scroll_area.setWidget(output)
@@ -146,12 +146,6 @@ class MainWindow(QMainWindow):
         deep_probe_output.setStyleSheet("border: 1px solid white;")
         deep_probe_output.setWordWrap(True)
         deep_probe_output.setOpenExternalLinks(True)
-
-        # deep_probe_output_scroll_area = QScrollArea()
-        # deep_probe_output_scroll_area.setWidget(deep_probe_output)
-        # deep_probe_output.setFixedWidth(output.width() // 3)
-        # deep_probe_output_scroll_area.setWidgetResizable(True)
-        # deep_probe_output_scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         return output_scroll_area, deep_probe_output
 
@@ -189,9 +183,10 @@ class MainWindow(QMainWindow):
         return control_panel
 
     def disco_subject(self, text):
-        if text:
-            global_state.wikipedia_url = f"https://en.wikipedia.org/wiki/{text}"
-        else:
+        global_state.wikipedia_url = (
+            f"https://en.wikipedia.org/wiki/{text}" if text else ""
+        )
+        if not text:
             output.setText("Please fill in the form...")
 
     def disco_terms(self, text):
@@ -206,53 +201,28 @@ class MainWindow(QMainWindow):
 
     def spyder_1st_run(self):
         output.setText("Launching spider...")
-        global result
         if global_state.wikipedia_url:
             global_state.wikipedia_url = global_state.wikipedia_url.replace(" ", "%20")
             result = self.scrape_wikipedia_references(
                 global_state.wikipedia_url, global_state.search_terms
             )
-            # global_state.found_links = result.split("\n") if result else []
             output.setText(self.format_links(result))
             tally_output.setText(self.tally_links(global_state.matched_links))
         else:
             output.setText("No subject URL found...")
 
-    # def spyder_infinite(self):
-    #     self.is_deep_probing = not self.is_deep_probing
-    #     if self.is_deep_probing:
-    #         output.setText("Deep probe launched")
-    #         self.deep_probe_button.setText("Pause Deep Probe")
-    #         result = self.deep_scrape_wikipedia(global_state.found_links, global_state.search_terms)
-    #         deep_probe_output.setText(self.format_links(result))
-    #         time.sleep(2)
-    #         deep_probe_output.setText("")
-    #     else:
-    #         output.setText("Deep probe paused.")
-    #         self.deep_probe_button.setText("Resume Deep Probe")
-
     def scrape_wikipedia_references(self, url, search_terms):
+        global fixed_links
         try:
-            response = requests.get(
-                global_state.wikipedia_url
-            )  # Fetch the Wikipedia page
+            response = requests.get(global_state.wikipedia_url)
             response.raise_for_status()
             soup = BeautifulSoup(response.content, "html.parser")
-            references_section = soup.find("ol", class_="references")
+            references_section = soup.find("ol", class_="references") or soup.find(
+                "div", class_="reflist reflist-columns references-column-width"
+            )
             if not references_section:
-                references_section = soup.find(
-                    "div", class_="reflist reflist-columns references-column-width"
-                )
-                if not references_section:
-                    print("No references section found.")
-                    return ["No references section found."]
+                return ["No references section found."]
 
-            # Print the references section for debugging
-            print(references_section.prettify())
-            print(len(references_section))
-
-            # Extract all links from the references section\
-            global fixed_links
             all_links = [
                 link["href"] for link in references_section.find_all("a", href=True)
             ]
@@ -261,14 +231,9 @@ class MainWindow(QMainWindow):
                 for link in all_links
             ]
 
-            # Print the extracted links for debugging
-            print("Extracted links:", fixed_links)
-            print(len(fixed_links))
-
             if not search_terms:
                 return fixed_links
 
-            # Filter links based on search terms
             matched_links = [
                 link
                 for link in fixed_links
@@ -285,92 +250,118 @@ class MainWindow(QMainWindow):
         except Exception as e:
             return [f"An error occurred: {str(e)}"]
 
-    # def deep_scrape_wikipedia(self, found_links, search_terms):
-    #     try:
-    #         base_url = "https://en.wikipedia.org"
-    #         matched_links = []
-    #         for sub_url in found_links:
-    #             if sub_url.startswith("#"):
-    #                 continue
-    #             if sub_url.startswith("/"):
-    #                 sub_url = f"{base_url}{sub_url}"
-    #             response = requests.get(sub_url)
-    #             sub_soup = BeautifulSoup(response.text, 'html.parser')
-    #             sub_links = sub_soup.find_all('a', href=True)
-    #             for sub_link in sub_links:
-    #                 href = sub_link['href']
-    #                 if href.startswith("#"):
-    #                     deep_probe_output.setText(f"Skipping internal link: {href}, temp. void.")
-    #                     continue
-    #                 if href.startswith("/"):
-    #                     href = f"{base_url}{href}"
-    #                 if any(term in sub_link.get_text() for term in search_terms):
-    #                     deep_probe_output.setText(f"Found matching link: {href}")
-    #                     matched_links.append(href)
-    #         deep_probe_output.setText("\n".join(matched_links) if matched_links else "No matching links found in deep probe.")
-    #     except Exception as e:
-    #         deep_probe_output.setText(f"An error occurred: {str(e)}")
-    #         return f"An error occurred: {str(e)}"
+    async def download_image(self, session, url, semaphore):
+        async with semaphore:
+            try:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    soup = BeautifulSoup(await response.text(), "html.parser")
+                    image_tags = soup.find_all("img", src=True)
+                    for img_tag in image_tags:
+                        src = img_tag["src"]
+                        link = re.search(r"(https?://[^\s]+\.(jpg|jpeg|png|gif))", src)
+                        if link is None:
+                            global_state.messages.append(
+                                f"Skipping non-image link: {src}"
+                            )
+                        else:
+                            img_url = link.group(1)
+                            if img_url in global_state.image_urls:
+                                continue
+                            QMetaObject.invokeMethod(
+                                deep_probe_output,
+                                "setText",
+                                Q_ARG(str, f"Probing for images from: {img_url}"),
+                            )
+                            global_state.image_urls.append(img_url)
+
+                    formatted_image_links = [
+                        f'<a href="{link}" style="color: yellow; text-decoration: underline;">{link}</a>'
+                        for link in global_state.image_urls
+                    ]
+                    QMetaObject.invokeMethod(
+                        deep_probe_output,
+                        "setText",
+                        Q_ARG(
+                            str,
+                            f'<h5>Found {len(global_state.image_urls)} images from:</h5>{url}<br/>{"<br/>".join(formatted_image_links)}<h6>Ready to view...</h6>',
+                        ),
+                    )
+
+                    if global_state.image_urls:
+                        for img_url in global_state.image_urls:
+                            global_state.messages.append(img_url)
+                            async with session.get(img_url) as img_response:
+                                img_data = await img_response.read()
+                                img = Image.open(BytesIO(img_data))
+                                try:
+                                    img.verify()
+                                    image_name = os.path.basename(img_url)
+                                    output_path = os.path.join(img_dir, image_name)
+                                    if os.path.exists(output_path):
+                                        continue
+                                    img = Image.open(BytesIO(img_data))
+                                    img.save(output_path)
+                                    if (
+                                        output_path,
+                                        img_url,
+                                    ) not in global_state.images:
+                                        global_state.images.append(
+                                            (output_path, img_url)
+                                        )
+                                except (IOError, SyntaxError) as e:
+                                    print(f"Skipping invalid image: {img_url} - {e}")
+                        QMetaObject.invokeMethod(
+                            output,
+                            "setText",
+                            Q_ARG(str, "\n".join(global_state.messages)),
+                        )
+                    else:
+                        QMetaObject.invokeMethod(
+                            deep_probe_output,
+                            "setText",
+                            Q_ARG(str, f"{global_state.messages}\n\n"),
+                        )
+                    global_state.image_urls.clear()
+            except aiohttp.ClientResponseError as e:
+                if e.status == 403:
+                    QMetaObject.invokeMethod(
+                        output,
+                        "setText",
+                        Q_ARG(str, f"Access denied (403) for URL: {url}"),
+                    )
+                elif e.status == 443:
+                    QMetaObject.invokeMethod(
+                        output,
+                        "setText",
+                        Q_ARG(str, f"Connection refused (443) for URL: {url}"),
+                    )
+                else:
+                    QMetaObject.invokeMethod(
+                        output, "setText", Q_ARG(str, f"An error occurred: {str(e)}")
+                    )
+            except aiohttp.ClientError as e:
+                QMetaObject.invokeMethod(
+                    output, "setText", Q_ARG(str, f"An error occurred: {str(e)}")
+                )
+
+    async def find_images_async(self, urls):
+        timeout = ClientTimeout(total=60)
+        connector = TCPConnector(limit_per_host=10)
+        semaphore = asyncio.Semaphore(10)
+        async with ClientSession(timeout=timeout, connector=connector) as session:
+            tasks = [self.download_image(session, url, semaphore) for url in urls]
+            await asyncio.gather(*tasks)
 
     def find_images(self, urls):
         print(f"{urls}\n\n")
         try:
-            for url in urls:
-                response = requests.get(url)
-                soup = BeautifulSoup(response.text, "html.parser")
-                image_tags = soup.find_all("img", src=True)
-                print(f"{image_tags}\n\n")
-                for img_tag in image_tags:
-                    src = img_tag["src"]
-                    link = re.search(r"(https?://[^\s]+\.(jpg|jpeg|png|gif))", src)
-                    if link is None:
-                        global_state.messages.append(f"Skipping non-image link: {src}")
-                        print(f"Skipping non-image link: {src} ***********\n\n\n")
-                    else:
-                        print(f"link = {link.group(1)}")
-                        print(f"adding image url to image_urls list: {link.group(1)}")
-                        deep_probe_output.setText(
-                            f"Probing for images from: {link.group(1)}"
-                        )
-                        global_state.image_urls.append(link.group(1))
-                        print("Next..**************\n")
-
-                formatted_image_links = [
-                    f'<a href="{link}" style="color: yellow; text-decoration: underline;">{link}</a>'
-                    for link in global_state.image_urls
-                ]
-                deep_probe_output.setText(
-                    f'<h5>Found {len(global_state.image_urls)} images from:</h5>{url}<br/>{"<br/>".join(formatted_image_links)}<h6>Ready to view...</h6>'
-                )
-                time.sleep(5)
-
-                if global_state.image_urls:
-                    print(
-                        f"Found {len(global_state.image_urls)} images\n**************"
-                    )
-                    print(f"{global_state.image_urls}\n\n")
-                    for img_url in global_state.image_urls:
-                        global_state.messages.append(img_url)
-                        img_response = requests.get(img_url)
-                        img = Image.open(BytesIO(img_response.content))
-                        try:
-                            img.verify()
-                            image_name = os.path.basename(img_url)
-                            output_path = os.path.join(img_dir, image_name)
-                            img = Image.open(
-                                BytesIO(img_response.content)
-                            )  # Reopen the image
-                            img.save(output_path)
-                            global_state.images.append(output_path)
-                        except (IOError, SyntaxError) as e:
-                            print(f"Skipping invalid image: {img_url} - {e}")
-                    output.setText("\n".join(global_state.messages))
-                else:
-                    deep_probe_output.setText(f"{global_state.messages}\n\n")
-                global_state.image_urls.clear()  # Clear image URLs after processing each URL
+            asyncio.run(self.find_images_async(urls))
             return global_state.image_urls
         except Exception as e:
-            output.setText(f"An error occurred: {str(e)}")
+            QMetaObject.invokeMethod(
+                output, "setText", Q_ARG(str, f"An error occurred: {str(e)}")
+            )
             print(f"An error occurred: {str(e)}")
         return []
 
@@ -381,11 +372,15 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         self.parent.cleanup_images(event)
-        event.accept()  # Accept the close event to proceed with closing
+        event.accept()
 
     def view_images_button(self):
         output.setText("Launching image viewer...")
         self.find_images(global_state.matched_links)
+
+        if not global_state.images:
+            output.setText("No images found to display.")
+            return
 
         image_dialog = self.ImageDialog()
         image_dialog.setWindowTitle("Image Viewer")
@@ -399,7 +394,13 @@ class MainWindow(QMainWindow):
         row = QHBoxLayout()
         count = 0
 
-        for img_path in global_state.images:
+        def create_mouse_press_event(url):
+            def mouse_press_event(event):
+                QDesktopServices.openUrl(QUrl(url))
+
+            return mouse_press_event
+
+        for img_path, img_url in global_state.images:
             img_label = QLabel()
             img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             img_label.setFixedSize(200, 200)
@@ -412,6 +413,7 @@ class MainWindow(QMainWindow):
                     Qt.TransformationMode.SmoothTransformation,
                 )
             )
+            img_label.mousePressEvent = create_mouse_press_event(img_url)
             row.addWidget(img_label)
             count += 1
             if count % 5 == 0:
@@ -428,21 +430,18 @@ class MainWindow(QMainWindow):
         image_dialog_layout.addWidget(scroll_area)
         image_dialog.setLayout(image_dialog_layout)
 
-        image_dialog.setFixedWidth(5 * 200 + 40)  # Set width to fit at least 5 labels
-        global_state.images.clear()
-        global_state.image_urls = []
+        image_dialog.setFixedWidth(5 * 200 + 40)
         image_dialog.exec()
 
     def closeEvent(self, event):
-        # Purge images when the app exits
         self.cleanup_images()
         event.accept()
 
     def format_links(self, text):
         links = text if isinstance(text, list) else text.split("\n")
         formatted_links = [
-            f'<a href="{link}" style="color: yellow; text-decoration: underline;">{link}</a>'
-            for link in links
+            f'{index + 1}. <a href="{link}" style="color: yellow; text-decoration: underline;">{link}</a>'
+            for index, link in enumerate(links)
         ]
         self.tally_links(global_state.matched_links)
         return f'<h2>LINKS FOUND:</h2><h4>Click to visit or add/remove search terms</h4><br/>{"<br/>".join(formatted_links)}'
