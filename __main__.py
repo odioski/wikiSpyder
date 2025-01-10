@@ -1,9 +1,4 @@
-from wikiSpyder import launch
-
-def main():
-
-    launch()
+from wikiSpyder.main import main
 
 if __name__ == "__main__":
-
     main()
