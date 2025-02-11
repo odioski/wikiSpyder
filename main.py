@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from PIL import Image, ImageQt
 from io import BytesIO
 from PIL import ImageQt
-from PyQt6.QtCore import Qt, QMetaObject, Q_ARG, QUrl, QThreadPool, QRunnable, pyqtSlot
+from PyQt6.QtCore import Qt, QMetaObject, QUrl, QThreadPool, QRunnable, pyqtSlot,  Q_ARG
 from PyQt6.QtGui import QPixmap, QDesktopServices
 from PyQt6.QtWidgets import (
     QApplication,
@@ -259,7 +259,7 @@ class MainWindow(QMainWindow):
                     image_tags = soup.find_all("img", src=True)
                     for img_tag in image_tags:
                         src = img_tag["src"]
-                        link = re.search(r"(https?://[^\s]+\.(jpg|jpeg|png|gif))", src)
+                        link = re.search(r"(https?://[^\s]+\.(jpg|jpeg|png|gif|webp))", src)
                         if link is None:
                             global_state.messages.append(
                                 f"Skipping non-image link: {src}"
