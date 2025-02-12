@@ -6,9 +6,8 @@ import requests
 from bs4 import BeautifulSoup
 from PIL import Image, ImageQt
 from io import BytesIO
-from PIL import ImageQt
-from PyQt6.QtCore import Qt, QMetaObject, QUrl, QThreadPool, QRunnable, pyqtSlot,  Q_ARG
-from PyQt6.QtGui import QPixmap, QDesktopServices
+from PyQt6.QtCore import Qt, QMetaObject, QUrl, QThreadPool, QRunnable, pyqtSlot, Q_ARG
+from PyQt6.QtGui import QPixmap, QDesktopServices, QIcon
 from PyQt6.QtWidgets import (
     QApplication,
     QLabel,
@@ -20,6 +19,12 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QWidget,
     QDialog,
+    QMenuBar,
+    QStatusBar,
+    QProgressBar,
+    QMessageBox,
+    QFileDialog,
+    QCheckBox,
 )
 import asyncio
 import aiohttp
@@ -52,6 +57,10 @@ class MainWindow(QMainWindow):
 
     def init_ui(self):
         self.setWindowTitle("wikiSpyder 0.2.1")
+        self.setWindowIcon(QIcon(os.path.join(basedir, "icon.png")))
+
+        self.create_menu_bar()
+        self.create_status_bar()
 
         logo = self.create_logo()
         subject_label, subject_url = self.create_subject_input()
@@ -90,6 +99,108 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(container)
         self.setFixedSize(1200, 600)
 
+    def create_menu_bar(self):
+        menu_bar = QMenuBar(self)
+        
+        file_menu = menu_bar.addMenu("File")
+        file_menu.addAction("New", self.new_file)
+        file_menu.addAction("Open", self.open_file)
+        file_menu.addAction("Save Found Links", self.save_found_links)
+        file_menu.addAction("Save Matched Links", self.save_matched_links)
+        file_menu.addAction("Save Images", self.save_images)  # Add Save Images action
+        file_menu.addAction("Exit", self.exit_app)
+        
+        images_menu = menu_bar.addMenu("Images")
+        images_menu.addAction("View Images", self.view_images_button)
+        
+        help_menu = menu_bar.addMenu("Help")
+        help_menu.addAction("About", self.about_app)
+        help_menu.addAction("Documentation", self.open_documentation)
+        
+        self.setMenuBar(menu_bar)
+
+    def new_file(self):
+        # Implement new file functionality
+        print("New file created")
+
+    def open_file(self):
+        # Implement open file functionality
+        print("File opened")
+
+    def save_found_links(self):
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save Found Links", "", "Text Files (*.txt);;All Files (*)")
+        if file_path:
+            with open(file_path, 'w') as file:
+                file.write("Found Links:\n")
+                for link in fixed_links:
+                    file.write(f"{link}\n")
+            print(f"Found links saved to {file_path}")
+
+    def save_matched_links(self):
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save Matched Links", "", "Text Files (*.txt);;All Files (*)")
+        if file_path:
+            with open(file_path, 'w') as file:
+                file.write("Matched Links:\n")
+                for link in global_state.matched_links:
+                    file.write(f"{link}\n")
+            print(f"Matched links saved to {file_path}")
+
+    def save_images(self):
+        folder_path = QFileDialog.getExistingDirectory(self, "Select Folder to Save Images")
+        if folder_path:
+            try:
+                for filename in os.listdir(img_dir):
+                    full_file_name = os.path.join(img_dir, filename)
+                    if os.path.isfile(full_file_name):
+                        shutil.copy(full_file_name, folder_path)
+                        if not os.path.isfile(os.path.join(folder_path, filename)):
+                            raise Exception(f"Failed to copy {filename}")
+                QMessageBox.information(self, "Success", f"Images saved to {folder_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to save images: {str(e)}")
+
+    def save_selected_images(self, selected_images):
+        folder_path = QFileDialog.getExistingDirectory(self, "Select Folder to Save Images")
+        if folder_path:
+            try:
+                for img_path in selected_images:
+                    if os.path.isfile(img_path):
+                        filename = os.path.basename(img_path)
+                        shutil.copy(img_path, folder_path)
+                        if not os.path.isfile(os.path.join(folder_path, filename)):
+                            raise Exception(f"Failed to copy {filename}")
+                QMessageBox.information(self, "Success", f"Selected images saved to {folder_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to save images: {str(e)}")
+
+    def exit_app(self):
+        # Implement exit application functionality
+        self.close()
+
+    def zoom_in(self):
+        # Implement zoom in functionality
+        print("Zoomed in")
+
+    def zoom_out(self):
+        # Implement zoom out functionality
+        print("Zoomed out")
+
+    def reset_zoom(self):
+        # Implement reset zoom functionality
+        print("Zoom reset")
+
+    def about_app(self):
+        # Implement about application functionality
+        QMessageBox.about(self, "About wikiSpyder", "wikiSpyder 0.2.1\nA Wikipedia reference and image scraper.")
+
+    def open_documentation(self):
+        # Implement open documentation functionality
+        QDesktopServices.openUrl(QUrl("https://github.com/your-repo/wikiSpyder"))
+
+    def create_status_bar(self):
+        status_bar = QStatusBar(self)
+        self.setStatusBar(status_bar)
+
     def create_logo(self):
         logo = QLabel()
         logo.setPixmap(QPixmap(os.path.join(basedir, "logo.png")))
@@ -101,6 +212,8 @@ class MainWindow(QMainWindow):
         subject_url = QLineEdit()
         subject_url.setPlaceholderText("wikipedia.org/wiki/YourFavoriteStar")
         subject_url.textChanged.connect(self.disco_subject)
+        subject_url.returnPressed.connect(self.spyder_1st_run)  # Link Enter key to launch button
+        subject_url.setToolTip("Enter the Wikipedia URL of the subject")
         return subject_label, subject_url
 
     def create_search_term_input(self):
@@ -110,19 +223,24 @@ class MainWindow(QMainWindow):
             "TYPE or DROP your search terms here; use csv or txt file if it's a long list"
         )
         search_term_inputs.textChanged.connect(self.disco_terms)
+        search_term_inputs.returnPressed.connect(self.spyder_1st_run)  # Link Enter key to launch button
+        search_term_inputs.setToolTip("Enter search terms separated by spaces")
         return search_term_label, search_term_inputs
 
     def create_control_buttons(self):
         launch_button = QPushButton("Launch")
         launch_button.setFixedSize(200, 50)
         launch_button.clicked.connect(self.spyder_1st_run)
+        launch_button.setToolTip("Start the spider to search for references")
 
         self.deep_probe_button = QPushButton("Deep Probe")
         self.deep_probe_button.setFixedSize(200, 50)
+        self.deep_probe_button.setToolTip("Perform a deep probe for images")
 
         view_images_button = QPushButton("View Images")
         view_images_button.setFixedSize(200, 50)
         view_images_button.clicked.connect(self.view_images_button)
+        view_images_button.setToolTip("View the downloaded images")
 
         return launch_button, self.deep_probe_button, view_images_button
 
@@ -354,16 +472,19 @@ class MainWindow(QMainWindow):
             await asyncio.gather(*tasks)
 
     def find_images(self, urls):
-        print(f"{urls}\n\n")
+        output.setText("Finding images...")
         try:
             asyncio.run(self.find_images_async(urls))
-            return global_state.image_urls
+            if global_state.images:
+                output.setText("Images found.")
+            else:
+                output.setText("No images found.")
         except Exception as e:
             QMetaObject.invokeMethod(
                 output, "setText", Q_ARG(str, f"An error occurred: {str(e)}")
             )
             print(f"An error occurred: {str(e)}")
-        return []
+        return global_state.image_urls
 
     class ImageDialog(QDialog):
         def __init__(self, parent=None):
@@ -382,23 +503,45 @@ class MainWindow(QMainWindow):
             output.setText("No images found to display.")
             return
 
-        image_dialog = self.ImageDialog()
+        image_dialog = QDialog(self)
         image_dialog.setWindowTitle("Image Viewer")
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         dialog_widget = QWidget()
-        dialog_layout = QHBoxLayout(dialog_widget)
+        dialog_layout = QVBoxLayout(dialog_widget)
         row_layout = QVBoxLayout()
         row = QHBoxLayout()
         count = 0
+
+        selected_images = []
+        checkboxes = []
 
         def create_mouse_press_event(url):
             def mouse_press_event(event):
                 QDesktopServices.openUrl(QUrl(url))
 
             return mouse_press_event
+
+        def create_checkbox_event(img_path):
+            def checkbox_event(state):
+                if state == Qt.CheckState.Checked:
+                    if img_path not in selected_images:
+                        selected_images.append(img_path)
+                else:
+                    if img_path in selected_images:
+                        selected_images.remove(img_path)
+
+            return checkbox_event
+
+        def select_all_images(state):
+            if state == Qt.CheckState.Checked:
+                for checkbox in checkboxes:
+                    checkbox.setChecked(True)
+            else:
+                for checkbox in checkboxes:
+                    checkbox.setChecked(False)
 
         for img_path, img_url in global_state.images:
             img_label = QLabel()
@@ -414,7 +557,15 @@ class MainWindow(QMainWindow):
                 )
             )
             img_label.mousePressEvent = create_mouse_press_event(img_url)
-            row.addWidget(img_label)
+
+            checkbox = QCheckBox()
+            checkbox.stateChanged.connect(create_checkbox_event(img_path))
+            checkboxes.append(checkbox)
+
+            img_layout = QVBoxLayout()
+            img_layout.addWidget(img_label)
+            img_layout.addWidget(checkbox)
+            row.addLayout(img_layout)
             count += 1
             if count % 5 == 0:
                 row_layout.addLayout(row)
@@ -428,10 +579,32 @@ class MainWindow(QMainWindow):
         scroll_area.setWidget(dialog_widget)
         image_dialog_layout = QVBoxLayout(image_dialog)
         image_dialog_layout.addWidget(scroll_area)
-        image_dialog.setLayout(image_dialog_layout)
 
+        select_all_checkbox = QCheckBox("Select All")
+        select_all_checkbox.stateChanged.connect(select_all_images)
+        image_dialog_layout.addWidget(select_all_checkbox)
+
+        save_button = QPushButton("Save Selected Images")
+        save_button.clicked.connect(lambda: self.save_selected_images(selected_images))
+        image_dialog_layout.addWidget(save_button)
+
+        image_dialog.setLayout(image_dialog_layout)
         image_dialog.setFixedWidth(5 * 200 + 40)
         image_dialog.exec()
+
+    def save_selected_images(self, selected_images):
+        folder_path = QFileDialog.getExistingDirectory(self, "Select Folder to Save Images")
+        if folder_path:
+            try:
+                for img_path in selected_images:
+                    if os.path.isfile(img_path):
+                        filename = os.path.basename(img_path)
+                        shutil.copy(img_path, folder_path)
+                        if not os.path.isfile(os.path.join(folder_path, filename)):
+                            raise Exception(f"Failed to copy {filename}")
+                QMessageBox.information(self, "Success", f"Selected images saved to {folder_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to save images: {str(e)}")
 
     def closeEvent(self, event):
         self.cleanup_images()
@@ -447,11 +620,11 @@ class MainWindow(QMainWindow):
         return f'<h2>LINKS FOUND:</h2><h4>Click to visit or add/remove search terms</h4><br/>{"<br/>".join(formatted_links)}'
 
     def tally_links(self, text):
-        formatted_matched_links = [
-            f'<a href="{link}" style="color: pink; text-decoration: underline;">{link}</a>'
-            for link in global_state.matched_links
-        ]
-        return f'<h2>TALLY: Found Links = {len(fixed_links)} Matched Links = {len(global_state.matched_links)}</h2><br/>{"<br/>".join(formatted_matched_links)}'
+        # formatted_matched_links = [
+        #     f'<a href="{link}" style="color: pink; text-decoration: underline;">{link}</a>'
+        #     for link in global_state.matched_links
+        # ]
+        return f'<h2>TALLY: Found Links = {len(fixed_links)} Matched Links = {len(global_state.matched_links)}</h2><br/>{"<br/>"}'
 
 
 def main():
