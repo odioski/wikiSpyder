@@ -165,10 +165,11 @@ class MainWindow(QMainWindow):
             try:
                 for img_path in selected_images:
                     if os.path.isfile(img_path):
-                        filename = os.path.basename(img_path)
-                        shutil.copy(img_path, folder_path)
-                        if not os.path.isfile(os.path.join(folder_path, filename)):
-                            raise Exception(f"Failed to copy {filename}")
+                        filename, _ = QFileDialog.getSaveFileName(self, "Save Image As", os.path.join(folder_path, os.path.basename(img_path)), "Images (*.png *.xpm *.jpg)")
+                        if filename:
+                            shutil.copy(img_path, filename)
+                            if not os.path.isfile(filename):
+                                raise Exception(f"Failed to copy {filename}")
                 QMessageBox.information(self, "Success", f"Selected images saved to {folder_path}")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to save images: {str(e)}")
@@ -176,18 +177,6 @@ class MainWindow(QMainWindow):
     def exit_app(self):
         # Implement exit application functionality
         self.close()
-
-    def zoom_in(self):
-        # Implement zoom in functionality
-        print("Zoomed in")
-
-    def zoom_out(self):
-        # Implement zoom out functionality
-        print("Zoomed out")
-
-    def reset_zoom(self):
-        # Implement reset zoom functionality
-        print("Zoom reset")
 
     def about_app(self):
         # Implement about application functionality
@@ -598,10 +587,11 @@ class MainWindow(QMainWindow):
             try:
                 for img_path in selected_images:
                     if os.path.isfile(img_path):
-                        filename = os.path.basename(img_path)
-                        shutil.copy(img_path, folder_path)
-                        if not os.path.isfile(os.path.join(folder_path, filename)):
-                            raise Exception(f"Failed to copy {filename}")
+                        filename, _ = QFileDialog.getSaveFileName(self, "Save Image As", os.path.join(folder_path, os.path.basename(img_path)), "Images (*.png *.xpm *.jpg)")
+                        if filename:
+                            shutil.copy(img_path, filename)
+                            if not os.path.isfile(filename):
+                                raise Exception(f"Failed to copy {filename}")
                 QMessageBox.information(self, "Success", f"Selected images saved to {folder_path}")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to save images: {str(e)}")
