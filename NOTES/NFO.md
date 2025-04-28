@@ -57,7 +57,14 @@ If you would like to see additional features added or have a suggestion, you can
 
 Spiders, crawlers, scrapers, copiers, and most search agents have roughly the same foundations. Usually the initial spawn of their capabilities can be traced back to RegEx, a suite of tools and symbols used to create regular expressions (an introductory math tool)which are useful when creating search patterns. As far as traversal and movement, the spider merely visits the webpage much like a browser and copies (reads, as well, or merely streams) the DOM of the landing page. RegEx comes into play as the spider decides where to visit next based on what's LINKED in the DOM. Back at the launch site, regular expressions are employed again to find what if any which was desired if it's within the pages that were visited. RegEx is exemplary when pursuing strings, but the theory can be applied to any object which includes practically any file found in almost any accessible computer system.
 
+An object, its realm and what it is within the sphere of a computer system is what you might get from this passage/essay/sales attempt. Everything...which connects or is accessible by the microprocessor of your machine is indeed interpreted as an file or an object. A few bits and an address somewhere in memory it has access to (which is not always RAM) and where to push those bits next is all a microprocessor does. It does this at a rate which would be considered astronomical back in 89 when I was still a teen and jokes like that were good. Today, and for you, it's wise to spend some time on that. Remember, the speed at which a microprocessor operates is what gives it such capabiltiy.
 
+    What I mean:
+    - A file is an object.
+    - A connected device is also an object/file (not just printers and cameras, the keyboard, the monitor, the MMU and Cache RAM which is internal to the machine, the acutal RAM as well as ROM in some systems and the BIOS, the motherboard it resides on...EVERYTHING IT HAS ACCESS TO OR COMMUNICATES WITH)
+    - The YouTube video and the screen you watch it on, via smartphone or TV, are actually individual objects in the real physical world they exist in, which is the memory of that particluar device you pervey such.
+    - EVERYTHI8NG WIHIN THE OS OR COMPUTER SYSTEM YOU USE IS AN OBJECT. OR, FILE. EVERYTHING!!
+    
 # The Difference Between Spiders
 
 All spiders are similar in the sense that they all crawl websites and that the main job is to report what they find. The real difference is the scope and focus each spider has.
