@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import (
 import asyncio
 import aiohttp
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
+from PyQt6.QtGui import QPalette, QColor
 
 basedir = os.path.dirname(__file__)
 img_dir = "saved_images"
@@ -622,6 +623,22 @@ def main():
     app.setStyle("Fusion")
     window = MainWindow()
     window.show()
+    # Apply Fusion style with a custom dark theme
+    dark_palette = QPalette()
+    dark_palette.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
+    dark_palette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
+    dark_palette.setColor(QPalette.ColorRole.Base, QColor(42, 42, 42))
+    dark_palette.setColor(QPalette.ColorRole.AlternateBase, QColor(66, 66, 66))
+    dark_palette.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.white)
+    dark_palette.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.white)
+    dark_palette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.white)
+    dark_palette.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
+    dark_palette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
+    dark_palette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
+    dark_palette.setColor(QPalette.ColorRole.Highlight, QColor(142, 45, 197))
+    dark_palette.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
+
+    app.setPalette(dark_palette)
     app.exec()
 
 
