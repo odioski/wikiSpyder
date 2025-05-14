@@ -21,8 +21,9 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
 # Installation
 
     - wikiSpyder-1.0 works with Python 3.12 
-    - re (RegEx module), pyQt, and other imported modules will be downloaded if not on the system upon first launch.
-    - Use the Installer found in /INSTALLER if on Windows or python.exe -m setup.py if on Mac or Linux. setup.py can be found in the root of wikiSpyder.
+    - re (RegEx module), pyQt6, and other imported modules will be downloaded if not on the system upon first launch.
+    - Another option is to use pip install -r requirements.txt to grab all the dependecies. 
+    - However, depending on your system you'll most likely need to invoke a venv to run pip effectively or let your ide install the neccessary libraries.
 
 # Gifts
 
