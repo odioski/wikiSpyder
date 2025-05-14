@@ -1,13 +1,20 @@
-import re
+# Standard library imports
 import os
+import re
 import shutil
-import time
+from io import BytesIO
+
+# Third-party library imports
 import requests
 from bs4 import BeautifulSoup
-from PIL import Image, ImageQt
-from io import BytesIO
-from PyQt6.QtCore import Qt, QMetaObject, QUrl, QThreadPool, QRunnable, pyqtSlot, Q_ARG
-from PyQt6.QtGui import QPixmap, QDesktopServices, QIcon
+from PIL import Image
+import asyncio
+import aiohttp  # Ensure aiohttp is imported
+from aiohttp import ClientSession, ClientTimeout, TCPConnector
+
+# PyQt6 imports
+from PyQt6.QtCore import Qt, QMetaObject, QUrl, pyqtSlot, Q_ARG
+from PyQt6.QtGui import QPixmap, QDesktopServices, QIcon, QPalette, QColor
 from PyQt6.QtWidgets import (
     QApplication,
     QLabel,
@@ -26,10 +33,6 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QCheckBox,
 )
-import asyncio
-import aiohttp
-from aiohttp import ClientSession, ClientTimeout, TCPConnector
-from PyQt6.QtGui import QPalette, QColor
 
 basedir = os.path.dirname(__file__)
 img_dir = "saved_images"
