@@ -50,7 +50,7 @@ If you'd like to buy me a cup of coffee that would be very kind of you.
 
 Donations are accepted here: PAYPAL | If you'd like to remain TOTALLY anonymous it's completely UNDERSTOOD by me. Such proceeds are accepted here: BITCOIN WALLET.
 
-<img src="paypal.png" alt="paypal QR" width="200" height="200" style="margin-right: 50px;"><span style="width: 50px, height: 50px;"></span><img src="wallet.png" alt="Bitcoin wallet QR" width="200" height="200">
+<img src="../paypal.png" alt="paypal QR" width="200" height="200" style="margin-right: 50px;"><span style="width: 50px, height: 50px;"></span><img src="../wallet.png" alt="Bitcoin wallet QR" width="200" height="200">
 
 If you would like to see additional features added or have a suggestion, you can send me a note: score+@bookmotives.com
 
