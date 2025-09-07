@@ -27,7 +27,7 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
 
 # Gifts
 
-If you woul like to buy me a cup of coffee that would be very kind of you.
+If you woud like to buy me a cup of coffee that would be very kind of you.
 
 Donations are accepted here: PAYPAL | If you'd like to remain TOTALLY anonymous it's completely UNDERSTOOD by me. Such proceeds are accepted here: BITCOIN WALLET.
 
