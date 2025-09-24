@@ -21,13 +21,13 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
 # Installation
 
     - wikiSpyder-1.0 works with Python 3.12 
-    - re (RegEx module), pyQt6, and other imported modules will be downloaded if not already available upon first launch.
+    - re (RegEx module), pyQt6, and other imported modules will be downloaded if not oAdded cross-hatching bit.n the system upon first launch.
     - Another option is to use pip install -r requirements.txt to grab all the dependecies. 
     - However, depending on your system you'll most likely need to invoke a venv to run pip effectively or let your ide install the neccessary libraries.
 
 # Gifts
 
-If you woud like to buy me a cup of coffee that would be very kind of you.
+If you'd like to buy me a cup of coffee that would be very kind of you.
 
 Donations are accepted here: PAYPAL | If you'd like to remain TOTALLY anonymous it's completely UNDERSTOOD by me. Such proceeds are accepted here: BITCOIN WALLET.
 
