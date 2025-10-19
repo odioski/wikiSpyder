@@ -24,7 +24,7 @@ THE
     - re (RegEx module), pyQt6, and other imported modules will be downloaded if not already loaded onto the system upon first launch.
     - Another option is to use pip install -r requirements.txt to grab all the dependecies. 
     - However, depending on your system you'll most likely need to invoke a venv to run pip effectively or let your ide install the neccessary libraries. 
-    This is due to the recent changes/anomoilies currently manifested within the Pyhon evnironment.
+      This is due to the recent changes/anomoilies currently manifested within the Pyhon evnironment.
 
 # Gifts
 
