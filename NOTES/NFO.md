@@ -75,7 +75,7 @@ It is wise to spend some time on that. Yes, indeed, think about that. Always rem
 
 All spiders are similar in the sense that they all crawl websites and that the main job is to report what they find. The real difference is the scope and focus each spider has.
 
-    - Scrapers are usually focused on particular types of media (objects, files) like audio and video, sometimes both, as well as photo images. Their scope is well defined usually, only a handful of sites are normally visited, and one, maybe two or three types     of media are ever in focus.
+    - Scrapers are usually focused on particular types of media (objects, files) like audio and video, sometimes both, as well as photo images. Their scope is well defined usually, only a handful of sites are normally visited, and one, maybe two or three types of media are ever in focus.
     - The Copiers goal is to grab everything available from the site so to replicate or clone the targeted site.
     - Spiders can do what all the others do although storing data is far less important than finding it. Such is somewhat counterintuitive to the nature of a spider so as a crawler they're more acceptable.
     - Search agents are usually spiders in whole. They operate on a planetary scale and their scope is trained on the entire expanse of the World Wide Web.
