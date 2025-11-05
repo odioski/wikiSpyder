@@ -17,13 +17,14 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
     - Additional sources (i.e.. URLs, web addresses) can be added/removed before and during deployments.
     - wikiSpyder can save all images automatically, if Save Images is checked.
     - For now, all data pulled by wikiSpyder which isn't saved is purged once the program is exited.
-
+THE 
 # Installation
 
     - wikiSpyder-1.0 works with Python 3.12 
-    - re (RegEx module), pyQt6, and other imported modules will be downloaded if not oAdded cross-hatching bit.n the system upon first launch.
+    - re (RegEx module), pyQt6, and other imported modules will be downloaded if not already loaded onto the system upon first launch.
     - Another option is to use pip install -r requirements.txt to grab all the dependecies. 
-    - However, depending on your system you'll most likely need to invoke a venv to run pip effectively or let your ide install the neccessary libraries.
+    - However, depending on your system you'll most likely need to invoke a venv to run pip effectively or let your ide install the neccessary libraries. 
+      This is due to the recent changes/anomoilies currently manifested within the Pyhon evnironment.
 
 # Gifts
 
