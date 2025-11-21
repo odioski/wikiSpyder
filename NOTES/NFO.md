@@ -75,8 +75,13 @@ It is wise to spend some time on that. Yes, indeed, think about that. Always rem
 
 All spiders are similar in the sense that they all crawl websites and that the main job is to report what they find. The real difference is the scope and focus each spider has.
 
-    - Scrapers are usually focused on particular types of media (objects, files) like audio and video, sometimes both, as well as photo images. Their scope is well defined usually, only a handful of sites are normally visited, and one, maybe two or three types     of media are ever in focus.
+<<<<<<< HEAD
+    - Scrapers are usually focused on particular types of media (objects, files) like audio and video, sometimes both, as well as photo images. Their scope is well defined usually, only a handful of sites are normally visited, and one, maybe two or three types  of media are ever in focus.
+    - The Copiers goal is to grab everything available from the site so to replicate or clone the targeted site. Their scope and focus are singular or sometimes tunnel-vision like as if practically mining.
+=======
+    - Scrapers are usually focused on particular types of media (objects, files) like audio and video, sometimes both, as well as photo images. Their scope is well defined usually, only a handful of sites are normally visited, and one, maybe two or three types of media are ever in focus.
     - The Copiers goal is to grab everything available from the site so to replicate or clone the targeted site.
+>>>>>>> 96339bb8cc2291cde4bc82f66b257fae679565b3
     - Spiders can do what all the others do although storing data is far less important than finding it. Such is somewhat counterintuitive to the nature of a spider so as a crawler they're more acceptable.
     - Search agents are usually spiders in whole. They operate on a planetary scale and their scope is trained on the entire expanse of the World Wide Web.
     - All in all, the differences in functionality are negligible since any of them can easily be re-engineered to perform the other's task. However, depending on the assigned task the number of resources required can be astronomical.
