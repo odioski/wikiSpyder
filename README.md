@@ -46,7 +46,14 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
         path-to-venv/bin/python path-to-venv/bin/pip \
         install --upgrade -r ./requirements.txt
 
-If using Visual Studio Code you can launch code and activate the workspace (wikiSpyder.code-workspace) and code will setup and/or install the dependicies as well as suggest useful addons.
+    you can also...
+
+        source venv/bin/activate \
+        pip install --upgrade -r requirements.txt
+
+    If usuing Visual Studio Code you can launch and activate the workspace "wikiSpyder.code-workspace" and code will setup and install the dependicies for you as well as suggest userfull addons.
+
+        code wikiSpyder/wikispider.code-workspace
 
 # Gifts
 
