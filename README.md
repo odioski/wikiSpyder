@@ -35,7 +35,7 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
 
         cd wikiSpyder
 
-- Use the Installer found in /INSTALLER if on Windows
+~~Use the installer found in the `/INSTALLER` directory if you are on Windows.~~
     
 - If on Mac or Linux and while being in ./ or wikiSpyder/ create a venv with:
     

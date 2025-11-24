@@ -12,6 +12,8 @@ It can speed up the search process considerably for working professionals or any
 From there the user can peruse an filtered manifest of links with search terms in the URLs. Beneath the results a tally with the count of how many times a search terms(s) was found per link along with the tallied search term and the correlated link.
 If you like, wikiSpyder will continue to crawl until you've narrowed down the site with the information you were looking for.
 
+
+#
 # Features
 
 - Sites where no search termss were found, or anomalies where the landing page is mostly video or audio presentations are marked as NULL. They can still be accessed manually for eyes-on investigations. Just click the highlighted link to explore with your browser.
@@ -25,6 +27,7 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
 - For now, all data pulled by wikiSpyder which isn't saved is purged once the program is exited.
 
 
+#
 # Installation
 
 - wikiSpyder-1.0 works with Python 3.12 
@@ -57,22 +60,25 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
         code wikiSpyder/wikispider.code-workspace
 
 
+
 # Future renditions
 
 If successful or if wikiSpyder becomes likeable or valuable, I'll extend it's range to other sources of info such as social networks.
 
-i.e..:
-    mySpyder
-    xSpyder
-    fSpyder
-    InstaSpyder
-    spotiSpyder
-    and so on...and so forth.
+-i.e,
+
+-mySpyder
+-xSpyder
+-fSpyder
+-InstaSpyder
+-spotiSpyder
+-and so on...and so forth.
 
 
 # How wikiSpyder works
 
-    - wikiSpyder uses RegEx and Beautiful Soup to perform most of it's tasks. The rest is provided by PyQt in order to make it look good and add a little sizzle to the application. 
+- wikiSpyder uses RegEx and Beautiful Soup to perform most of it's tasks. The rest is provided by PyQt in order to make it look good and add a little sizzle to the application. 
+
 
 
 # Gifts
@@ -85,7 +91,7 @@ Donations are accepted here: PAYPAL | If you'd like to remain TOTALLY anonymous 
 
 If you would like to see additional features added or have a suggestion, you can send me a note: score+@bookmotives.com
 
-
+#
 # How Spiders Work
 
 Spiders, crawlers, scrapers, copiers, and most search agents have roughly the same foundations. Usually the initial spawn of their capabilities can be traced back to RegEx, a suite of tools and symbols used to create regular expressions (an introductory math tool)which are useful when creating search patterns. As far as traversal and movement, the spider merely visits the webpage much like a browser and copies (reads, as well, or merely streams) the DOM of the landing page. RegEx comes into play as the spider decides where to visit next based on what's LINKED in the DOM. Back at the launch site, regular expressions are employed again to find what if any which was desired if it's within the pages that were visited. RegEx is exemplary when pursuing strings, but the theory can be applied to any object which includes practically any file found in almost any accessible computer system.
