@@ -45,7 +45,7 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
     and then...
 
         path-to-venv/bin/python path-to-venv/bin/pip \
-        install --upgrade -r ./requirements.txt
+           install --upgrade -r ./requirements.txt
 
     you can also...
 
