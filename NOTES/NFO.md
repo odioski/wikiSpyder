@@ -114,7 +114,7 @@ Always remember, the speed at which a microprocessor operates is what gives it s
 
     - The YouTube video and the screen you watch it on, via smartphone or TV, are actually individual objects in the real physical world they exist in, which is the memory of that particluar device you pervey such.
 
-    - EVERYTHI8NG WIHIN THE OS OR COMPUTER SYSTEM YOU USE IS AN OBJECT. OR FILE. EVERYTHING.
+    - EVERYTHING WIHIN THE OS OR COMPUTER SYSTEM YOU USE IS AN OBJECT. OR FILE. EVERYTHING.
     
 # The Difference Between Spiders
 
