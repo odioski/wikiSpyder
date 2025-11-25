@@ -3,8 +3,6 @@
 Advanced Wikipedia Search Tool
 
 # ABOUT wikiSpyder
-r system you'll most likely need to invoke a venv to run pip effectively or let your ide install the neccessary libraries. 
-      This is due to the recent changes/anomoilies currently manifested within the Pyhon eco-system.
 The goal of this app/utility is to assist users, researchers and investigators of any kind, as well as students, journalists, or anyone who likes to use Wikipedia while searching for information. 
 What it will do is scrape the REFERENCES section posted last in most Wikipedia search result pages. After which wikiSpyder can be deployed to crawl the URLs (websites) or the list of links that were scraped from the REFERENCE sections.
 While on the hunt, it will search for user provided search terms, keep a tally of how many times the search terms was found on the landing page of each link, notify the user of which page each search terms was found, and list how many times a search terms was found per visited URL.
