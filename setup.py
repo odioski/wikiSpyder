@@ -22,6 +22,6 @@ setup(
     include_package_data=True,
     author="Omar Daniels",
     author_email="link92@bookmotives.com",
-    description="A web scraping tool to find and display images from Wikipedia references.",
+    description="A web scraping tool to find and display images from the references secition found in most wikipedia search results landing pages.",
     url="https://github.com/odioski",
 )
