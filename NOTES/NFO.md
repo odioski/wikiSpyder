@@ -13,36 +13,73 @@ It can speed up the search process considerably for working professionals or any
 From there the user can peruse an filtered manifest of links with search terms in the URLs. Beneath the results a tally with the count of how many times a search terms(s) was found per link along with the tallied search term and the correlated link.
 If you like, wikiSpyder will continue to crawl until you've narrowed down the site with the information you were looking for.
 
-    - Sites where no search termss were found, or anomalies where the landing page is mostly video or audio presentations are marked as NULL. They can still be accessed manually for eyes-on investigations. Just click the highlighted link to explore with your browser.
-    - wikiSpyder has a button which will release it to crawl recursively into each listed website if permitted or plausible, and as deep as the target will allow.
-    - Additional sources (i.e.. URLs, web addresses) can be added/removed before and during deployments.
-    - wikiSpyder can save all images automatically, if Save Images is checked.
-    - For now, all data pulled by wikiSpyder which isn't saved is purged once the program is exited.
+
+#
+# Features
+
+- Sites where no search termss were found, or anomalies where the landing page is mostly video or audio presentations are marked as NULL. They can still be accessed manually for eyes-on investigations. Just click the highlighted link to explore with your browser.
+
+- wikiSpyder has a button which will release it to crawl recursively into each listed website if permitted or plausible, and as deep as the target will allow.
+
+- Additional sources (i.e.. URLs, web addresses) can be added/removed before and during deployments.
+
+- wikiSpyder can save all images automatically, if Save Images is checked.
+
+- For now, all data pulled by wikiSpyder which isn't saved is purged once the program is exited.
 
 
+#
 # Installation
 
-    - wikiSpyder-1.0 works with Python 3.12 
-    - re (RegEx module), pyQt, and other imported modules will be downloaded if not on the system upon first launch.
-    - Use the Installer found in /INSTALLER if on Windows or python.exe -m setup.py if on Mac or Linux. setup.py can be found in the root of wikiSpyder.
+- wikiSpyder-1.0 works with Python 3.12 
+- re (RegEx module), pyQt, and other imported modules will be downloaded if not on the system upon first launch.
+
+- Download wikiSpyder:
+
+        git clone github.com/odioski/wikiSpyder.git \
+
+        cd wikiSpyder
+
+- Use the Installer found in /INSTALLER if on Windows
+    
+- If on Mac or Linux and while being in ./ or wikiSpyder/ create a venv with:
+    
+        python venv path/to/your/venv 
+     
+    and then...
+
+        path-to-venv/bin/python path-to-venv/bin/pip \
+            install --upgrade -r ./requirements.txt
+
+    you can also...
+
+        source venv/bin/activate \
+            pip install --upgrade -r requirements.txt
+
+    If usuing Visual Studio Code you can launch and activate the workspace "wikiSpyder.code-workspace" and code will setup and install the dependicies for you as well as suggest usefull addons.
+
+        code wikiSpyder/wikispider.code-workspace
+
 
 
 # Future renditions
 
 If successful or if wikiSpyder becomes likeable or valuable, I'll extend it's range to other sources of info such as social networks.
 
-i.e..:
-    mySpyder
-    xSpyder
-    fSpyder
-    InstaSpyder
-    spotiSpyder
-    and so on...and so forth.
+-i.e,
+
+-mySpyder
+-xSpyder
+-fSpyder
+-InstaSpyder
+-spotiSpyder
+-and so on...and so forth.
 
 
 # How wikiSpyder works
 
-    - wikiSpyder uses RegEx and Beautiful Soup to perform most of it's tasks. The rest is provided by PyQt in order to make it look good and add a little sizzle to the application. 
+- wikiSpyder uses RegEx and Beautiful Soup to perform most of it's tasks. The rest is provided by PyQt in order to make it look good and add a little sizzle to the application. 
+
 
 
 # Gifts
@@ -55,34 +92,48 @@ Donations are accepted here: PAYPAL | If you'd like to remain TOTALLY anonymous 
 
 If you would like to see additional features added or have a suggestion, you can send me a note: score+@bookmotives.com
 
-
+#
 # How Spiders Work
 
 Spiders, crawlers, scrapers, copiers, and most search agents have roughly the same foundations. Usually the initial spawn of their capabilities can be traced back to RegEx, a suite of tools and symbols used to create regular expressions (an introductory math tool)which are useful when creating search patterns. As far as traversal and movement, the spider merely visits the webpage much like a browser and copies (reads, as well, or merely streams) the DOM of the landing page. RegEx comes into play as the spider decides where to visit next based on what's LINKED in the DOM. Back at the launch site, regular expressions are employed again to find what if any which was desired if it's within the pages that were visited. RegEx is exemplary when pursuing strings, but the theory can be applied to any object which includes practically any file found in almost any accessible computer system.
 
 # What's an Object?
 
-An object, its realm and what it is within the sphere of a computer system is what you might get from this passage/essay/sales pitch. Everything...which connects or is accessible by the microprocessor of your machine is indeed interpreted as an file or an object. A few bits and an address somewhere in memory it has access to (which is not always RAM) and where to push those bits next is all a microprocessor does. It does this at a rate (speed) which can and is still considered phenominal almost a century after its invention. However, there are no moving parts. No audio or visual display or ques of what's occuring at practically light speed for the average human. The microprocessor is merely a circuit, well defined, well devised, beyond complex unless you're one of those who knows the circuit, it's gargantuan map and how it all fits together. What would amount to a few football fields of schematics is shruken so that it fits on a 5X5 inch piece of whatever material is viable. A couple of other technologies in the world of physics and chemistry is what ties it all together and makes for this explosion/revolution, perhaps delimiter or sentencing, which is still being felt throughout the world. If you ever get the chance to learn how a microprocesor does it's job, it'll blow your mind, I assure you. Because as amazing as it is, it operates on one of the most fundamental human levels. Its design is of a craft we've employed since mankinds existence on this planet.
+An object, its realm and what it is within the sphere of a computer system is what you might get from this passage/essay/sales pitch. Everything...which connects or is accessible by the microprocessor of your machine is indeed interpreted as an file or an object. A few bits and an address somewhere in memory it has access to (which is not always RAM) and where to push those bits next is all a microprocessor does or how it handles those objects and any object it ecounters. As a file, hardware adress, or anything including everything that is part of the system. Even a single bit like 0 (can be null or nil, and both) or 1 are actually, objects.
 
-It is wise to spend some time on that. Yes, indeed, think about that. Always remember, the speed at which a microprocessor operates is what gives it such capabiltiy. Remember as well, we build these machines so to aid or service us.
+# What's an MicroProccessor?
+
+ It does its job at a rate (speed) which can be and is still considered phenominal almost a century after its invention. However, there are no moving parts. No audio or visual display or ques of what's occuring at practically light speed for the average human. The microprocessor is merely a circuit, well defined, well devised, beyond complex unless you're one of those who knows the circuit, it's gargantuan map and how it all fits together. What would amount to a few football fields of schematics is shruken so that it fits on a 5X5 inch piece of whatever material is viable. A couple of other technologies in the world of physics and chemistry is what ties it all together and makes for this explosion/revolution, perhaps delimiter or sentencing, which is still being felt throughout the world. If you ever get the chance to learn how a microprocesor does it's job, it'll blow your mind, I assure you. Because as amazing as it is, it operates on one of the most fundamental human levels. Its design is of a craft we've employed since mankinds existence on this planet.
+
+Always remember, the speed at which a microprocessor operates is what gives it such capabiltiy. Remember as well, we build these machines so to aid or service us.
 
     What I mean:
+
     - A file is an object.
-    - A connected device is also an object/file (not just printers and cameras, the keyboard, the monitor, the MMU and Cache RAM which is internal to the machine, the acutal RAM as well as ROM in some systems and the BIOS, the motherboard it resides on...EVERYTHING IT HAS ACCESS TO OR COMMUNICATES WITH)
+
+    - A connected device is also an object/file (not just printers and cameras, the keyboard, the monitor, the MMU and Cache RAM which is internal to the machine, the acutal RAM as well as ROM in some systems and the BIOS, the motherboard it resides on...BUT, EVERYTHING IT HAS ACCESS TO OR COMMUNICATES WITH)
+
     - The YouTube video and the screen you watch it on, via smartphone or TV, are actually individual objects in the real physical world they exist in, which is the memory of that particluar device you pervey such.
-    - EVERYTHI8NG WIHIN THE OS OR COMPUTER SYSTEM YOU USE IS AN OBJECT. OR FILE. EVERYTHING.
+
+    - EVERYTHING WIHIN THE OS OR COMPUTER SYSTEM YOU USE IS AN OBJECT. OR FILE. EVERYTHING.
     
 # The Difference Between Spiders
 
 All spiders are similar in the sense that they all crawl websites and that the main job is to report what they find. The real difference is the scope and focus each spider has.
 
-<<<<<<< HEAD
-    - Scrapers are usually focused on particular types of media (objects, files) like audio and video, sometimes both, as well as photo images. Their scope is well defined usually, only a handful of sites are normally visited, and one, maybe two or three types  of media are ever in focus.
-    - The Copiers goal is to grab everything available from the site so to replicate or clone the targeted site. Their scope and focus are singular or sometimes tunnel-vision like as if practically mining.
-=======
-    - Scrapers are usually focused on particular types of media (objects, files) like audio and video, sometimes both, as well as photo images. Their scope is well defined usually, only a handful of sites are normally visited, and one, maybe two or three types of media are ever in focus.
-    - The Copiers goal is to grab everything available from the site so to replicate or clone the targeted site.
->>>>>>> 96339bb8cc2291cde4bc82f66b257fae679565b3
-    - Spiders can do what all the others do although storing data is far less important than finding it. Such is somewhat counterintuitive to the nature of a spider so as a crawler they're more acceptable.
-    - Search agents are usually spiders in whole. They operate on a planetary scale and their scope is trained on the entire expanse of the World Wide Web.
-    - All in all, the differences in functionality are negligible since any of them can easily be re-engineered to perform the other's task. However, depending on the assigned task the number of resources required can be astronomical.
+- Scrapers are usually focused on particular types of media (objects, files) like audio and video, sometimes both, as well as photo images. Their scope is well defined usually, only a handful of sites are normally visited, and one, maybe two or three types  of media are ever in focus.
+    
+- The Copiers goal is to grab everything available from the site so to replicate or clone the targeted site. Their scope and focus are singular or sometimes tunnel-vision like as if practically mining.
+
+    
+- Scrapers are usually focused on particular types of media (objects, files) like audio and video, sometimes both, as well as photo images. Their scope is well defined usually, only a handful of sites are normally visited, and one, maybe two or three types of media are ever in focus.
+
+- The Copiers goal is to grab everything available from the site so to replicate or clone the targeted site.
+
+
+- Spiders can do what all the others do although storing data is far less important than finding it. Such is somewhat counterintuitive to the nature of a spider so as a crawler they're more acceptable.
+
+- Search agents are usually spiders in whole. They operate on a planetary scale and their scope is trained on the entire expanse of the World Wide Web.
+    
+
+- All in all, the differences in functionality are negligible since any of them can easily be re-engineered to perform the other's task. However, depending on the assigned task the number of resources required can be astronomical.

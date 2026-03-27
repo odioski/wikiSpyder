@@ -3,7 +3,6 @@
 Advanced Wikipedia Search Tool
 
 # ABOUT wikiSpyder
-
 The goal of this app/utility is to assist users, researchers and investigators of any kind, as well as students, journalists, or anyone who likes to use Wikipedia while searching for information. 
 What it will do is scrape the REFERENCES section posted last in most Wikipedia search result pages. After which wikiSpyder can be deployed to crawl the URLs (websites) or the list of links that were scraped from the REFERENCE sections.
 While on the hunt, it will search for user provided search terms, keep a tally of how many times the search terms was found on the landing page of each link, notify the user of which page each search terms was found, and list how many times a search terms was found per visited URL.
@@ -12,19 +11,48 @@ It can speed up the search process considerably for working professionals or any
 From there the user can peruse an additional manifest of links annotated with a count of how many times each search terms(s) was found per link along with the tallied search term.
 If you like, wikiSpyder will continue to crawl until you've narrowed down the site with the information you were looking for.
 
-    - Sites where no search termss were found, or anomalies where the landing page is mostly video or audio presentations are marked as NULL. They can still be accessed manually for eyes-on investigations. Just click the highlighted link to explore with your browser.
-    - wikiSpyder has a button which will release it to crawl recursively into each listed website if permitted or plausible, and as deep as the target will allow.
-    - Additional sources (i.e.. URLs, web addresses) can be added/removed before and during deployments.
-    - wikiSpyder can save all images automatically, if Save Images is checked.
-    - For now, all data pulled by wikiSpyder which isn't saved is purged once the program is exited.
-THE 
+
+- Sites where no search termss were found, or anomalies where the landing page is mostly video or audio presentations are marked as NULL. They can still be accessed manually for eyes-on investigations. Just click the highlighted link to explore with your browser.
+
+- wikiSpyder has a button which will release it to crawl recursively into each listed website if permitted or plausible, and as deep as the target will allow.
+
+- Additional sources (i.e.. URLs, web addresses) can be added/removed before and during deployments.
+
+- wikiSpyder can save all images automatically, if Save Images is checked.
+
+- For now, all data pulled by wikiSpyder which isn't saved is purged once the program is exited.
+
 # Installation
 
-    - wikiSpyder-1.0 works with Python 3.12 
-    - re (RegEx module), pyQt6, and other imported modules will be downloaded if not already loaded onto the system upon first launch.
-    - Another option is to use pip install -r requirements.txt to grab all the dependecies. 
-    - However, depending on your system you'll most likely need to invoke a venv to run pip effectively or let your ide install the neccessary libraries. 
-      This is due to the recent changes/anomoilies currently manifested within the Pyhon evnironment.
+- wikiSpyder-1.0 works with Python 3.12 
+- re (RegEx module), pyQt, and other imported modules will be downloaded if not on the system upon first launch.
+
+- Download wikiSpyder:
+
+        git clone github.com/odioski/wikiSpyder.git \
+
+        cd wikiSpyder
+
+~~Use the installer found in the `/INSTALLER` directory if you are on Windows.~~
+    
+- If on Mac or Linux and while being in ./ or wikiSpyder/ create a venv with:
+    
+        python venv path/to/your/venv 
+     
+    and then...
+
+        path-to-venv/bin/python path-to-venv/bin/pip \
+        install --upgrade -r ./requirements.txt
+
+    you can also...
+
+        source venv/bin/activate \
+        pip install --upgrade -r requirements.txt
+
+
+    If using Visual Studio Code you can launch and activate the workspace "wikiSpyder.code-workspace" and code will setup and install the dependicies for you as well as suggest usefull addons.
+
+        code wikiSpyder/wikispider.code-workspace
 
 # Gifts
 
@@ -35,5 +63,3 @@ Donations are accepted here: PAYPAL | If you'd like to remain TOTALLY anonymous 
 <img src="paypal.png" alt="paypal QR" width="200" height="200" style="margin-right: 50px;"><span style="width: 50px, height: 50px;"></span><img src="wallet.png" alt="Bitcoin wallet QR" width="200" height="200">
 
 If you would like to see additional features added or have a suggestion, you can send me a note: score+@bookmotives.com
-
-YOU SHOULD READ THE NOTES.
