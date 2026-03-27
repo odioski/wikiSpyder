@@ -1,382 +1,373 @@
-
-# Standard library imports
-
-import os
-import sys
-
-
-import re
-import shutil
-from io import BytesIO
-
-# Third-party library imports
-
-
-import requests
-
-from bs4 import BeautifulSoup
-
-from PIL import Image
+from __future__ import annotations
 
 import asyncio
+import os
+import re
+import shutil
+import sys
+from dataclasses import dataclass, field
+from io import BytesIO
+from urllib.parse import urljoin
+
 import aiohttp
-from aiohttp import ClientSession, ClientTimeout, TCPConnector
-
-# PyQt6 imports
-
-
-from PyQt6.QtCore import Qt, QMetaObject, QUrl, Q_ARG
-from PyQt6.QtGui import QPixmap, QDesktopServices, QIcon, QPalette, QColor
+import requests
+from bs4 import BeautifulSoup
+from PIL import Image, UnidentifiedImageError
+from PyQt6.QtCore import Qt, QUrl
+from PyQt6.QtGui import QCloseEvent, QDesktopServices, QMouseEvent, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
-    QLabel,
-    QLineEdit,
-    QMainWindow,
-    QPushButton,
-    QVBoxLayout,
-    QHBoxLayout,
-    QScrollArea,
-    QWidget,
-    QDialog,
-    QMenuBar,
-    QStatusBar,
-    QMessageBox,
-    QFileDialog,
     QCheckBox,
+    QDialog,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QScrollArea,
+    QVBoxLayout,
+    QWidget,
 )
 
+from newwindow import Ui_Dialog
 
-from PyQt6 import uic 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+IMG_DIR = os.path.join(BASE_DIR, "saved_images")
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/131.0.0.0 Safari/537.36"
+)
+IMAGE_PATTERN = re.compile(r"\.(?:jpg|jpeg|png|gif|webp)(?:$|[?#])", re.IGNORECASE)
 
-basedir = os.path.dirname(__file__)
-
-global img_dir
-
-img_dir = "saved_images"
-
-os.makedirs(img_dir, exist_ok=True)
+os.makedirs(IMG_DIR, exist_ok=True)
 
 
+@dataclass
 class GlobalState:
-    def __init__(self):
-        self.found_links = []
-        self.search_terms = []
-        self.wikipedia_url = ""
-        self.matched_links = []
-        self.images = []
-        self.image_urls = []
-        self.messages = []
-        self.fixed_links = []
-        self.scrollArea = []
-        self.scrollArea_2 = []
-        self.tally_scrollArea = []
-        self.Ui_Dialog = []
-        self.wikiSpyderMethods = []
-        self.wikiSpyderTools = []
-
+    found_links: list[str] = field(default_factory=list)
+    search_terms: list[str] = field(default_factory=list)
+    wikipedia_url: str = ""
+    matched_links: list[str] = field(default_factory=list)
+    images: list[tuple[str, str]] = field(default_factory=list)
+    image_urls: list[str] = field(default_factory=list)
+    messages: list[str] = field(default_factory=list)
+    fixed_links: list[str] = field(default_factory=list)
 
 
 global_state = GlobalState()
 
 
+class ClickableImageLabel(QLabel):
+    def __init__(self, url: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._url = url
 
-from PyQt6 import QtCore, QtGui, QtWidgets
-
-
-
-# UI class for the main dialog window
-class Ui_Dialog(object):
-    def setupUi(self, Dialog):
-        
-        # Set up the UI elements for the dialog window.
-
-        Dialog.setObjectName("Dialog")
-        Dialog.resize(915, 579)
-
-        self.buttonBox = QtWidgets.QDialogButtonBox(parent=Dialog)
-        self.buttonBox.setGeometry(QtCore.QRect(150, 530, 341, 32))
-        self.buttonBox.setOrientation(QtCore.Qt.Orientation.Horizontal)
-        self.buttonBox.setStandardButtons(
-            QtWidgets.QDialogButtonBox.StandardButton.Cancel |
-            QtWidgets.QDialogButtonBox.StandardButton.Ok
-        )
-        self.buttonBox.setObjectName("buttonBox")
-
-        self.pushButton = QtWidgets.QPushButton(parent=Dialog)
-        self.pushButton.setGeometry(QtCore.QRect(110, 440, 161, 61))
-        self.pushButton.setObjectName("pushButton")
-
-        self.pushButton_2 = QtWidgets.QPushButton(parent=Dialog)
-        self.pushButton_2.setGeometry(QtCore.QRect(380, 440, 161, 61))
-        self.pushButton_2.setObjectName("pushButton_2")
-
-        self.pushButton_3 = QtWidgets.QPushButton(parent=Dialog)
-        self.pushButton_3.setGeometry(QtCore.QRect(660, 440, 161, 61))
-        self.pushButton_3.setObjectName("pushButton_3")
-
-        self.subject_url = QtWidgets.QLineEdit(parent=Dialog)
-        self.subject_url.setGeometry(QtCore.QRect(30, 40, 271, 31))
-        self.subject_url.setObjectName("subject_url")
-
-        self.lineEdit_2 = QtWidgets.QLineEdit(parent=Dialog)
-        self.lineEdit_2.setGeometry(QtCore.QRect(30, 130, 641, 31))
-        self.lineEdit_2.setObjectName("lineEdit_2")
-
-        self.label = QtWidgets.QLabel(parent=Dialog)
-        self.label.setGeometry(QtCore.QRect(40, 10, 161, 18))
-        self.label.setObjectName("label")
-
-        self.label_2 = QtWidgets.QLabel(parent=Dialog)
-        self.label_2.setGeometry(QtCore.QRect(40, 80, 201, 31))
-        self.label_2.setObjectName("label_2")
-
-        self.label_3 = QtWidgets.QLabel(parent=Dialog)
-        self.label_3.setGeometry(QtCore.QRect(390, 170, 201, 31))
-        self.label_3.setObjectName("label_3")
-
-        self.label_4 = QtWidgets.QLabel(parent=Dialog)
-        self.label_4.setGeometry(QtCore.QRect(90, 210, 421, 211))
-        self.label_4.setObjectName("label_4")
-
-        self.label_5 = QtWidgets.QLabel(parent=Dialog)
-        self.label_5.setGeometry(QtCore.QRect(540, 210, 341, 211))
-        self.label_5.setObjectName("label_5")
-
-        self.verticalScrollBar_3 = QtWidgets.QScrollBar(parent=Dialog)
-        self.verticalScrollBar_3.setGeometry(QtCore.QRect(470, 230, 16, 160))
-        self.verticalScrollBar_3.setOrientation(QtCore.Qt.Orientation.Vertical)
-        self.verticalScrollBar_3.setObjectName("verticalScrollBar_3")
-
-        self.verticalScrollBar = QtWidgets.QScrollBar(parent=Dialog)
-        self.verticalScrollBar.setGeometry(QtCore.QRect(840, 230, 16, 160))
-        self.verticalScrollBar.setOrientation(QtCore.Qt.Orientation.Vertical)
-        self.verticalScrollBar.setObjectName("verticalScrollBar")
-
-        # self.retranslateUi(Dialog)
-        # self.buttonBox.accepted.connect(Dialog.accept)  # type: ignore
-        # self.buttonBox.rejected.connect(Dialog.reject)  # type: ignore
-        QtCore.QMetaObject.connectSlotsByName(Dialog)
-
-    def retranslateUi(self, Dialog):
-        
-        # Set text and placeholders for widgets.
-       
-        _translate = QtCore.QCoreApplication.translate
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
-        self.pushButton.setText(_translate("Dialog", "Launch"))
-        self.pushButton_2.setText(_translate("Dialog", "Deep Probe"))
-        self.pushButton_3.setText(_translate("Dialog", "View Images"))
-        self.subject_url.setPlaceholderText(
-            _translate("Dialog", "wikipedia.org/wiki/YourFavoriteStar")
-        )
-        self.lineEdit_2.setPlaceholderText(
-            _translate(
-                "Dialog",
-                "TYPE or DROP your search terms here; use csv or txt file if it's a long list."
-            )
-        )
-        self.label.setText(_translate("Dialog", "Subject"))
-        self.label_2.setText(_translate("Dialog", "Search Terms"))
-        self.label_3.setText(_translate("Dialog", "wikiSpyder 0.3.1"))
-        self.label_4.setText(_translate("Dialog", "TextLabel"))
-        self.label_5.setText(_translate("Dialog", "TextLabel"))
+    # def mousePressEvent(self, event: QMouseEvent | None) -> None:
+    #     QDesktopServices.openUrl(QUrl(self._url))
+    #     super().mousePressEvent(event)
 
 
-class wikiSpyderMethods(object):
-
-
-    def disco_terms(self, text):
-            
-        global_state.search_terms = text.split(" ") if text else []
-        
-
-    # File management and app handlers
-
-
-    def new_file(self):
-            
-            # Implement new file functionality
-
-            print("New file created")
-
-
-    def open_file(self):
-
-        # Implement open file functionality
-
-        print("File opened")
-
-
-    def save_found_links(self):
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save Found Links", "", "Text Files (*.txt);;All Files (*)")
-        if file_path:
-            with open(file_path, 'w') as file:
-                file.write("Found Links:\n")
-                for link in file:
-                    file.write(f"{link}\n")
-                print(f"Found links saved to {file_path}")
-
-
-    def save_matched_links(self):
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save Matched Links", "", "Text Files (*.txt);;All Files (*)")
-        if file_path:
-            with open(file_path, 'w') as file:
-                file.write("Matched Links:\n")
-                for link in global_state.matched_links:
-                    file.write(f"{link}\n")
-                print(f"Matched links saved to {file_path}")
-
-
-    def save_images(self):
-        folder_path = QFileDialog.getExistingDirectory(self, "Select Folder to Save Images")
-        if folder_path:
-                try:
-                    for filename in os.listdir(img_dir):
-                        full_file_name = os.path.join(img_dir, filename)
-                        if os.path.isfile(full_file_name):
-                            shutil.copy(full_file_name, folder_path)
-                            if not os.path.isfile(os.path.join(folder_path, filename)):
-                                raise Exception(f"Failed to copy {filename}")
-                    QMessageBox.information(self, "Success", f"Images saved to {folder_path}")
-                except Exception as e:
-                    QMessageBox.critical(self, "Error", f"Failed to save images: {str(e)}")
-
-
-    def save_selected_images(self, selected_images):
-        folder_path = QFileDialog.getExistingDirectory(self, "Select Folder to Save Images")
-        if folder_path:
-                try:
-                    for img_path in selected_images:
-                        if os.path.isfile(img_path):
-                            filename, _ = QFileDialog.getSaveFileName(self, "Save Image As", os.path.join(folder_path, os.path.basename(img_path)), "Images (*.png *.xpm *.jpg)")
-                            if filename:
-                                shutil.copy(img_path, filename)
-                                if not os.path.isfile(filename):
-                                    raise Exception(f"Failed to copy {filename}")
-                    QMessageBox.information(self, "Success", f"Selected images saved to {folder_path}")
-                except Exception as e:
-                    QMessageBox.critical(self, "Error", f"Failed to save images: {str(e)}")
-
-
-    def exit_app(self):
-
-        # Implement exit application functionality
-
-        self.close()
-
-
-# Main application execution
-
-
-    def spyder_1st_run(self):
-        # scrollArea.setText("Launching spider...")
-        if global_state.wikipedia_url:
-            global_state.wikipedia_url = global_state.wikipedia_url.replace(" ", "%20")
-            result = self.scrape_wikipedia_references(
-                global_state.wikipedia_url, global_state.search_terms
-            )
-            global_state.scrollArea.setText(self.format_links(result))
-            global_state.tally_scrollArea.setText(self.tally_links(global_state.matched_links))
-        else:
-            global_state.scrollArea.setText("No subject URL found...")
-
-
-    # Application methods.
-
-
-    def scrape_wikipedia_references(self, url, search_terms):
-            try:
-                headers = {
-                    "User-Agent": "Mozilla/5.0"
-                }
-                response = requests.get(global_state.wikipedia_url, headers=headers)
-                response.raise_for_status()
-                soup = BeautifulSoup(response.content, "html.parser")
-                references_section = soup.find("ol", class_="references") or soup.find(
-                    "div", class_="reflist reflist-columns references-column-width"
-                )
-                if not references_section:
-                    return ["No references section found."]
-                all_links = [link["href"] for link in references_section.find_all("a", href=True)]
-                fixed_links = [
-                    link if link.startswith("http") else f"https://en.wikipedia.org{link}"
-                    for link in all_links
-                ]
-                global_state.fixed_links = fixed_links
-                if not search_terms:
-                    return fixed_links
-                matched_links = [
-                    link for link in fixed_links if any(term in link for term in search_terms)
-                ]
-                global_state.matched_links = matched_links
-                return matched_links if matched_links else ["No matching links found in references."]
-            except Exception as e:
-                return [f"Error: {str(e)}"]
-
-            async def download_image(self, session, url, semaphore):
-                async with semaphore:
-                    try:
-                        headers = {"User-Agent": "Mozilla/5.0"}
-                        async with session.get(url, headers=headers) as response:
-                            response.raise_for_status()
-                            soup = BeautifulSoup(await response.text(), "html.parser")
-                            image_tags = soup.find_all("img", src=True)
-                        for img_tag in image_tags:
-                            src = img_tag["src"]
-                            match = re.search(r"(https?://[^\s]+\.(jpg|jpeg|png|gif|webp))", src)
-                            if match:
-                                img_url = match.group(1)
-                                if img_url not in global_state.image_urls:
-                                    global_state.image_urls.append(img_url)
-                        for img_url in global_state.image_urls:
-                            async with session.get(img_url) as img_response:
-                                img_data = await img_response.read()
-                                try:
-                                    img = Image.open(BytesIO(img_data))
-                                    img.verify()
-                                    image_name = os.path.basename(img_url)
-                                    output_path = os.path.join(img_dir, image_name)
-                                    if not os.path.exists(output_path):
-                                        img = Image.open(BytesIO(img_data))
-                                        img.save(output_path)
-                                        global_state.images.append((output_path, img_url))
-                                except Exception:
-                                    continue
-                        global_state.image_urls.clear()
-                    except Exception as e:
-                        QMetaObject.invokeMethod(
-                    output, "setText", Q_ARG(str, f"Image download error: {str(e)}")
-                    )
-
-            async def find_images_async(self, urls):
-                timeout = ClientTimeout(total=60)
-                connector = TCPConnector(limit_per_host=10)
-                semaphore = asyncio.Semaphore(10)
-                async with ClientSession(timeout=timeout, connector=connector) as session:
-                    tasks = [self.download_image(session, url, semaphore) for url in urls]
-                    await asyncio.gather(*tasks)
-
-
-class wikiSpyderTools(object):
-
-    def __init__(self):
+class MainWindow(QDialog):
+    def __init__(self) -> None:
         super().__init__()
+        self.ui = Ui_Dialog()
+        self.ui.setupUi(self)
+        self._configure_ui()
+        self._connect_signals()
 
+    def _configure_ui(self) -> None:
+        self.setWindowTitle("wikiSpyder 0.3.1")
 
-    def find_images(self, urls):
-    # output.setText("Finding images...")
+        self.ui.buttonBox.hide()
+        self.ui.verticalScrollBar.hide()
+        self.ui.verticalScrollBar_3.hide()
+
+        for label in (self.ui.label_4, self.ui.label_5):
+            label.setWordWrap(True)
+            label.setOpenExternalLinks(True)
+            label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+            label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+
+        self.ui.label_4.setText("Search results will appear here.")
+        self.ui.label_5.setText("Link tally and image status will appear here.")
+
+    def _connect_signals(self) -> None:
+        self.ui.subject_url.textChanged.connect(self.disco_subject)
+        self.ui.lineEdit_2.textChanged.connect(self.disco_terms)
+        self.ui.pushButton.clicked.connect(self.spyder_1st_run)
+        self.ui.pushButton_2.clicked.connect(self.deep_probe_view)
+        self.ui.pushButton_3.clicked.connect(self.view_images)
+
+    def disco_subject(self, text: str) -> None:
+        global_state.wikipedia_url = self._normalize_subject_url(text)
+        if not global_state.wikipedia_url:
+            self.ui.label_4.setText("Please fill in the form...")
+
+    def disco_terms(self, text: str) -> None:
+        global_state.search_terms = [
+            term for term in re.split(r"[\s,]+", text.strip()) if term
+        ]
+
+    def save_found_links(self) -> None:
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Found Links",
+            "",
+            "Text Files (*.txt);;All Files (*)",
+        )
+        if not file_path:
+            return
+
+        with open(file_path, "w", encoding="utf-8") as file:
+            file.write("Found Links:\n")
+            for link in global_state.found_links:
+                file.write(f"{link}\n")
+
+    def save_matched_links(self) -> None:
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Matched Links",
+            "",
+            "Text Files (*.txt);;All Files (*)",
+        )
+        if not file_path:
+            return
+
+        with open(file_path, "w", encoding="utf-8") as file:
+            file.write("Matched Links:\n")
+            for link in global_state.matched_links:
+                file.write(f"{link}\n")
+
+    def save_images(self) -> None:
+        folder_path = QFileDialog.getExistingDirectory(
+            self, "Select Folder to Save Images"
+        )
+        if not folder_path:
+            return
+
+        try:
+            for filename in os.listdir(IMG_DIR):
+                source_path = os.path.join(IMG_DIR, filename)
+                if os.path.isfile(source_path):
+                    shutil.copy(source_path, folder_path)
+            QMessageBox.information(self, "Success", f"Images saved to {folder_path}")
+        except OSError as exc:
+            QMessageBox.critical(
+                self, "Error", f"Failed to save images: {exc}"
+            )
+
+    def save_selected_images(self, selected_images: list[str]) -> None:
+        folder_path = QFileDialog.getExistingDirectory(
+            self, "Select Folder to Save Images"
+        )
+        if not folder_path:
+            return
+
+        try:
+            for image_path in selected_images:
+                if not os.path.isfile(image_path):
+                    continue
+
+                default_name = os.path.join(
+                    folder_path, os.path.basename(image_path)
+                )
+                filename, _ = QFileDialog.getSaveFileName(
+                    self,
+                    "Save Image As",
+                    default_name,
+                    "Images (*.png *.xpm *.jpg *.jpeg *.gif *.webp)",
+                )
+                if filename:
+                    shutil.copy(image_path, filename)
+            QMessageBox.information(
+                self, "Success", f"Selected images saved to {folder_path}"
+            )
+        except OSError as exc:
+            QMessageBox.critical(
+                self, "Error", f"Failed to save images: {exc}"
+            )
+
+    def spyder_1st_run(self) -> None:
+        if not global_state.wikipedia_url:
+            self.ui.label_4.setText("No subject URL found...")
+            return
+
+        self.ui.label_4.setText("Launching spider...")
+        QApplication.processEvents()
+
+        result = self.scrape_wikipedia_references(
+            global_state.wikipedia_url,
+            global_state.search_terms,
+        )
+        self.ui.label_4.setText(self.format_links(result))
+        self.ui.label_5.setText(self.tally_links())
+
+    def scrape_wikipedia_references(
+        self, url: str, search_terms: list[str]
+    ) -> list[str]:
+        try:
+            response = requests.get(
+                url,
+                headers={"User-Agent": USER_AGENT},
+                timeout=30,
+            )
+            response.raise_for_status()
+        except requests.RequestException as exc:
+            return [f"Request error: {exc}"]
+
+        try:
+            soup = BeautifulSoup(response.content, "html.parser")
+            references_section = soup.find("ol", class_="references") or soup.find(
+                "div",
+                class_="reflist reflist-columns references-column-width",
+            )
+            if references_section is None:
+                global_state.found_links = []
+                global_state.fixed_links = []
+                global_state.matched_links = []
+                return ["No references section found."]
+
+            fixed_links: list[str] = []
+            for tag in references_section.find_all("a", href=True):
+                href = str(tag.get("href", "")).strip()
+                if not href:
+                    continue
+                if href.startswith("http://") or href.startswith("https://"):
+                    fixed_links.append(href)
+                elif href.startswith("//"):
+                    fixed_links.append(f"https:{href}")
+                else:
+                    fixed_links.append(urljoin("https://en.wikipedia.org", href))
+
+            global_state.found_links = fixed_links
+            global_state.fixed_links = fixed_links
+
+            lowered_terms = [term.lower() for term in search_terms]
+            if not lowered_terms:
+                global_state.matched_links = []
+                return fixed_links
+
+            matched_links = [
+                link
+                for link in fixed_links
+                if any(term in link.lower() for term in lowered_terms)
+            ]
+            global_state.matched_links = matched_links
+            return (
+                matched_links
+                if matched_links
+                else ["No matching links found in references."]
+            )
+        except Exception as exc:
+            return [f"An error occurred: {exc}"]
+
+    async def download_image(
+        self,
+        session: aiohttp.ClientSession,
+        url: str,
+        semaphore: asyncio.Semaphore,
+    ) -> None:
+        async with semaphore:
+            try:
+                async with session.get(url, headers={"User-Agent": USER_AGENT}) as response:
+                    response.raise_for_status()
+                    html = await response.text()
+            except aiohttp.ClientError as exc:
+                global_state.messages.append(f"Skipping {url}: {exc}")
+                return
+
+            soup = BeautifulSoup(html, "html.parser")
+            discovered_urls: list[str] = []
+            for tag in soup.find_all("img", src=True):
+                src = str(tag.get("src", "")).strip()
+                image_url = self._normalize_image_url(src, url)
+                if not image_url or image_url in global_state.image_urls:
+                    continue
+                global_state.image_urls.append(image_url)
+                discovered_urls.append(image_url)
+
+            if discovered_urls:
+                self.ui.label_5.setText(
+                    f"Found {len(discovered_urls)} image candidates on:\n{url}"
+                )
+                QApplication.processEvents()
+
+            for image_url in discovered_urls:
+                try:
+                    async with session.get(
+                        image_url, headers={"User-Agent": USER_AGENT}
+                    ) as img_response:
+                        img_response.raise_for_status()
+                        img_data = await img_response.read()
+                except aiohttp.ClientError:
+                    continue
+
+                output_path = self._build_image_path(image_url)
+                try:
+                    with Image.open(BytesIO(img_data)) as image:
+                        image.verify()
+                    with Image.open(BytesIO(img_data)) as image:
+                        image.save(output_path)
+                except (UnidentifiedImageError, OSError):
+                    continue
+
+                global_state.images.append((output_path, image_url))
+
+    async def find_images_async(self, urls: list[str]) -> None:
+        if not urls:
+            return
+
+        timeout = aiohttp.ClientTimeout(total=60)
+        connector = aiohttp.TCPConnector(limit_per_host=10)
+        semaphore = asyncio.Semaphore(10)
+        async with aiohttp.ClientSession(
+            timeout=timeout,
+            connector=connector,
+        ) as session:
+            tasks = [self.download_image(session, url, semaphore) for url in urls]
+            await asyncio.gather(*tasks)
+
+    def find_images(self, urls: list[str]) -> list[tuple[str, str]]:
+        self.cleanup_images()
+        global_state.messages.clear()
+        global_state.image_urls.clear()
+
+        if not urls:
+            self.ui.label_5.setText("No links available for image probing.")
+            return []
+
+        self.ui.label_5.setText("Finding images...")
+        QApplication.processEvents()
+
         try:
             asyncio.run(self.find_images_async(urls))
-        # output.setText("Images found." if global_state.images else "No images found.")
-        except Exception as e:
-            QMetaObject.invokeMethod(
-           # output, "setText", Q_ARG(str, f"An error occurred: {str(e)}")
-            )
-        return global_state.image_urls
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(self.find_images_async(urls))
+            finally:
+                loop.close()
+        except Exception as exc:
+            self.ui.label_5.setText(f"An error occurred: {exc}")
+            return []
 
-    def launch_image_viewer(self):
+        if global_state.images:
+            self.ui.label_5.setText(
+                f"Found {len(global_state.images)} images ready to view."
+            )
+        else:
+            self.ui.label_5.setText("No images found.")
+        return global_state.images
+
+    def launch_image_viewer(self) -> None:
+        if not global_state.images:
+            QMessageBox.information(self, "Images", "No images found to display.")
+            return
+
         image_dialog = QDialog(self)
         image_dialog.setWindowTitle("Image Viewer")
+
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -385,99 +376,183 @@ class wikiSpyderTools(object):
         dialog_layout = QVBoxLayout(dialog_widget)
         row_layout = QVBoxLayout()
         row = QHBoxLayout()
-        count = 0
 
-        selected_images = []
-        checkboxes = []
+        selected_images: list[str] = []
+        checkboxes: list[QCheckBox] = []
 
-        def open_url(url):
-            QDesktopServices.openUrl(QUrl(url))
+        for index, (image_path, image_url) in enumerate(global_state.images, start=1):
+            image_label = ClickableImageLabel(image_url)
+            image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            image_label.setFixedSize(200, 200)
+            image_label.setStyleSheet("border: 1px solid white;")
 
-        def checkbox_event(img_path):
-            def handler(state):
-                if state == Qt.CheckState.Checked:
-                    if img_path not in selected_images:
-                        selected_images.append(img_path)
-                else:
-                    if img_path in selected_images:
-                        selected_images.remove(img_path)
-            return handler
-
-        def select_all_images(state):
-            for checkbox in checkboxes:
-                checkbox.setChecked(state == Qt.CheckState.Checked)
-
-        for img_path, img_url in global_state.images:
-            img_label = QLabel()
-            img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            img_label.setFixedSize(200, 200)
-            img_label.setStyleSheet("border: 1px solid white;")
-            pixmap = QPixmap(img_path)
-            img_label.setPixmap(
-                pixmap.scaled(
-                    img_label.size(),
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
+            pixmap = QPixmap(image_path)
+            if not pixmap.isNull():
+                image_label.setPixmap(
+                    pixmap.scaled(
+                        image_label.size(),
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
                 )
-            )
-            img_label.mousePressEvent = lambda event, url=img_url: open_url(url)
+
             checkbox = QCheckBox()
-            checkbox.stateChanged.connect(checkbox_event(img_path))
+
+            def on_state_changed(state: int, image_path: str = image_path) -> None:
+                is_checked = Qt.CheckState(state) == Qt.CheckState.Checked
+                if is_checked:
+                    if image_path not in selected_images:
+                        selected_images.append(image_path)
+                elif image_path in selected_images:
+                    selected_images.remove(image_path)
+
+            checkbox.stateChanged.connect(on_state_changed)
             checkboxes.append(checkbox)
-            img_layout = QVBoxLayout()
-            img_layout.addWidget(img_label)
-            img_layout.addWidget(checkbox)
-            row.addLayout(img_layout)
-            count += 1
-            if count % 5 == 0:
+
+            image_layout = QVBoxLayout()
+            image_layout.addWidget(image_label)
+            image_layout.addWidget(checkbox)
+            row.addLayout(image_layout)
+
+            if index % 5 == 0:
                 row_layout.addLayout(row)
                 row = QHBoxLayout()
-        if count % 5 != 0:
+
+        if global_state.images and len(global_state.images) % 5 != 0:
             row_layout.addLayout(row)
+
         dialog_layout.addLayout(row_layout)
         dialog_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
         scroll_area.setWidget(dialog_widget)
+
         image_dialog_layout = QVBoxLayout(image_dialog)
         image_dialog_layout.addWidget(scroll_area)
 
         select_all_checkbox = QCheckBox("Select All")
+
+        def select_all_images(state: int) -> None:
+            is_checked = Qt.CheckState(state) == Qt.CheckState.Checked
+            for checkbox in checkboxes:
+                checkbox.setChecked(is_checked)
+
         select_all_checkbox.stateChanged.connect(select_all_images)
         image_dialog_layout.addWidget(select_all_checkbox)
 
         save_button = QPushButton("Save Selected Images")
-        save_button.clicked.connect(lambda: self.save_selected_images(selected_images))
+        save_button.clicked.connect(
+            lambda: self.save_selected_images(selected_images)
+        )
         image_dialog_layout.addWidget(save_button)
 
         image_dialog.setLayout(image_dialog_layout)
         image_dialog.setFixedWidth(5 * 200 + 40)
         image_dialog.exec()
 
+    def view_images(self) -> None:
+        links = (
+            global_state.matched_links
+            if global_state.matched_links
+            else global_state.fixed_links
+        )
+        self.find_images(links)
+        self.launch_image_viewer()
+
+    def deep_probe_view(self) -> None:
+        self.find_images(global_state.fixed_links)
+        self.launch_image_viewer()
+
+    def format_links(self, links: list[str]) -> str:
+        if not links:
+            return "No links found."
+
+        formatted_links: list[str] = []
+        for index, link in enumerate(links, start=1):
+            if link.startswith("http://") or link.startswith("https://"):
+                formatted_links.append(
+                    f'{index}. <a href="{link}" '
+                    'style="color: yellow; text-decoration: underline;">'
+                    f"{link}</a>"
+                )
+            else:
+                formatted_links.append(f"{index}. {link}")
+
+        return (
+            "<h2>Links Found</h2>"
+            "<h4>Click a link to visit it.</h4><br/>"
+            + "<br/>".join(formatted_links)
+        )
+
+    def tally_links(self) -> str:
+        return (
+            "<h2>Tally</h2>"
+            f"<p>Found Links = {len(global_state.fixed_links)}</p>"
+            f"<p>Matched Links = {len(global_state.matched_links)}</p>"
+            f"<p>Images Saved = {len(global_state.images)}</p>"
+        )
+
+    def cleanup_images(self) -> None:
+        global_state.images.clear()
+        for filename in os.listdir(IMG_DIR):
+            file_path = os.path.join(IMG_DIR, filename)
+            if os.path.isfile(file_path):
+                try:
+                    os.remove(file_path)
+                except OSError:
+                    continue
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        self.cleanup_images()
+        event.accept()
+
+    @staticmethod
+    def _normalize_subject_url(text: str) -> str:
+        cleaned = text.strip()
+        if not cleaned:
+            return ""
+        if cleaned.startswith(("http://", "https://")):
+            return cleaned
+        if cleaned.startswith(("wikipedia.org/", "en.wikipedia.org/")):
+            return f"https://{cleaned}"
+        if cleaned.startswith("/wiki/"):
+            return f"https://en.wikipedia.org{cleaned}"
+        return f"https://en.wikipedia.org/wiki/{cleaned.replace(' ', '_')}"
+
+    @staticmethod
+    def _normalize_image_url(src: str, page_url: str) -> str | None:
+        if not src:
+            return None
+        if src.startswith("//"):
+            candidate = f"https:{src}"
+        else:
+            candidate = urljoin(page_url, src)
+        if not IMAGE_PATTERN.search(candidate):
+            return None
+        return candidate
+
+    def _build_image_path(self, image_url: str) -> str:
+        filename = os.path.basename(image_url.split("?", 1)[0].split("#", 1)[0])
+        if not filename:
+            filename = f"image_{len(global_state.images) + 1}.png"
+
+        name, extension = os.path.splitext(filename)
+        extension = extension or ".png"
+        candidate = os.path.join(IMG_DIR, f"{name}{extension}")
+        counter = 1
+        while os.path.exists(candidate):
+            candidate = os.path.join(IMG_DIR, f"{name}_{counter}{extension}")
+            counter += 1
+        return candidate
 
 
-class MainWindow(QtWidgets.QMainWindow):
+def main() -> int:
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
 
-    def __init__(self,*args,**kwargs):
-        super().__init__(*args,**kwargs)
-        self.ui = Ui_Dialog()
-        self.ui.setupUi(self)
-        self.ui.retranslateUi(self)
-
-        self.wikiSpyder = wikiSpyderMethods()
-
-        self.ui.pushButton.clicked.connect(self.wikiSpyder.spyder_1st_run)
-        # self.ui.pushButton_2.clicked.connect(self.wikiSpyder.deep_probe)
-
-        self.ws_tools = wikiSpyderTools()
-        self.ui.pushButton_3.clicked.connect(self.ws_tools.launch_image_viewer)
-        # self.ui.subject_url.textChanged.connect(self.ws_tools.update_subject_url)
-        # self.ui.lineEdit_2.textChanged.connect(self.ws_tools.update_disco_terms)
+    window = MainWindow()
+    window.show()
+    return app.exec()
 
 
-app = QtWidgets.QApplication(sys.argv)
-window = MainWindow()
-window.show()
-app.exec()
-
-
-
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -5,11 +5,11 @@ setup(
     version="0.2.1",
     packages=find_packages(),
     install_requires=[
-        "requests",
-        "beautifulsoup4",
-        "Pillow",
-        "PyQt6",
-        "aiohttp",
+        "aiohttp==3.13.3",
+        "beautifulsoup4==4.14.3",
+        "Pillow==12.1.1",
+        "PyQt6==6.5.0",
+        "requests==2.33.0",
     ],
     entry_points={
         "console_scripts": [

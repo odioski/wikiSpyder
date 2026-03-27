@@ -1,5 +1,7 @@
+# Direct runtime dependencies for wikiSpyder.
+# Transitive dependencies are intentionally omitted; pip will resolve them.
+aiohttp==3.13.3
+beautifulsoup4==4.14.3
+Pillow==12.1.1
 PyQt6==6.5.0
-requests>=2.31.0,<3.0.0
-beautifulsoup4>=4.12.2,<5.0.0
-Pillow>=10.3.0
-aiohttp>=3.8.5,<4.0.0
+requests==2.33.0
