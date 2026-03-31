@@ -1,3 +1,6 @@
 __pycache__
 venv
 .venv
+
+# Shell history files
+.bash_history
