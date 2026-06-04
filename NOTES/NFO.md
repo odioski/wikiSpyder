@@ -123,13 +123,10 @@ All spiders are similar in the sense that they all crawl websites and that the m
 
 - Scrapers are usually focused on particular types of media (objects, files) like audio and video, sometimes both, as well as photo images. Their scope is well defined usually, only a handful of sites are normally visited, and one, maybe two or three types  of media are ever in focus.
     
-- The Copiers goal is to grab everything available from the site so to replicate or clone the targeted site. Their scope and focus are singular or sometimes tunnel-vision like as if practically mining.
+- The Copiers goal is to grab everything available from the site so to replicate or clone the targeted site. Their scope and focus are singular or sometimes tunnel-vision like as if mining which they kind of are.
 
     
 - Scrapers are usually focused on particular types of media (objects, files) like audio and video, sometimes both, as well as photo images. Their scope is well defined usually, only a handful of sites are normally visited, and one, maybe two or three types of media are ever in focus.
-
-- The Copiers goal is to grab everything available from the site so to replicate or clone the targeted site.
-
 
 - Spiders can do what all the others do although storing data is far less important than finding it. Such is somewhat counterintuitive to the nature of a spider so as a crawler they're more acceptable.
 
