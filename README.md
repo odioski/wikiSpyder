@@ -24,35 +24,55 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
 
 # Installation
 
-- wikiSpyder-1.0 works with Python 3.12 
-- re (RegEx module), pyQt, and other imported modules will be downloaded if not on the system upon first launch.
+wikiSpyder 0.3.1 targets **Python 3.12**.
 
-- Download wikiSpyder:
+Clone the repository and create a virtual environment:
 
-        git clone github.com/odioski/wikiSpyder.git \
+```bash
+git clone https://github.com/odioski/wikiSpyder.git
+cd wikiSpyder
+python3.12 -m venv venv
+source venv/bin/activate
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements.txt
+```
 
-        cd wikiSpyder
+Run directly from the checkout:
 
-~~Use the installer found in the `/INSTALLER` directory if you are on Windows.~~
-    
-- If on Mac or Linux and while being in ./ or wikiSpyder/ create a venv with:
-    
-        python venv path/to/your/venv 
-     
-    and then...
+```bash
+python main.py
+```
 
-        path-to-venv/bin/python path-to-venv/bin/pip \
-        install --upgrade -r ./requirements.txt
+Optional: install the local package and launch it through the console entry point:
 
-    you can also...
+```bash
+python -m pip install .
+wikiSpyder
+```
 
-        source venv/bin/activate \
-        pip install --upgrade -r requirements.txt
+If using Visual Studio Code, open the workspace file:
 
+```bash
+code wikiSpyder.code-workspace
+```
 
-    If using Visual Studio Code you can launch and activate the workspace "wikiSpyder.code-workspace" and code will setup and install the dependicies for you as well as suggest usefull addons.
+## Local release checks
 
-        code wikiSpyder/wikispider.code-workspace
+Before cutting a release, run:
+
+```bash
+venv/bin/python -m py_compile __main__.py main.py newwindow.py setup.py
+venv/bin/python -c "import main, newwindow"
+QT_QPA_PLATFORM=offscreen venv/bin/python -c "from PyQt6.QtCore import QTimer; from PyQt6.QtWidgets import QApplication; import main; app = QApplication([]); window = main.MainWindow(); window.show(); QTimer.singleShot(0, window.close); QTimer.singleShot(0, app.quit); raise SystemExit(app.exec())"
+```
+
+Then do a quick manual pass in the GUI:
+
+- launch the app
+- fetch references from a known Wikipedia page
+- run **Deep Probe**
+- open **View Images**
+- confirm closing the app clears temporary downloaded images
 
 # Gifts
 

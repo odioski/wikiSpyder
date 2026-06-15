@@ -1,6 +1,10 @@
-__pycache__
-venv
-.venv
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+saved_images/
+*.bak
+pyvenv.cfg
 
 # Shell history files
 .bash_history

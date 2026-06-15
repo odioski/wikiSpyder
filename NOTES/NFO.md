@@ -30,7 +30,7 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
 #
 # Installation
 
-- wikiSpyder-1.0 works with Python 3.12 
+- wikiSpyder-0.3.1 works with Python 3.12 
 - re (RegEx module), pyQt, and other imported modules will be downloaded if not on the system upon first launch.
 
 - Download wikiSpyder:
