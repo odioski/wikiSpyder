@@ -66,7 +66,7 @@ class Ui_Dialog(object):
         _translate = QtCore.QCoreApplication.translate
         Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
         self.pushButton.setText(_translate("Dialog", "Launch"))
-        self.pushButton_2.setToolTip(_translate("Dialog", "If pressed crawl recursively into each listed website if permitted or plausible, and as deep as the target will allow."))
+        self.pushButton_2.setToolTip(_translate("Dialog", "<p style=\"white-space: normal; width: 300px;\">If pressed, wikiSpyder will crawl recursively into each listed website if permitted or plausible, and as deep as the target will allow.</p>"))
         self.pushButton_2.setText(_translate("Dialog", "Deep Probe"))
         self.pushButton_3.setToolTip(_translate("Dialog", "Find and open images from the matched links."))
         self.pushButton_3.setText(_translate("Dialog", "View Images"))

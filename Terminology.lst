@@ -178,6 +178,9 @@ minimize
 main functions
   Core app behavior methods. Example: refresh_current_view(), spyder_1st_run(), find_images(), and tally_links() carry the main workflows.
 
+deterministic
+  Predictable behavior that does not vary by platform defaults or incidental runtime state. Example: the Deep Probe tooltip uses a custom-drawn circular information icon so it stays circular instead of depending on the operating system's standard icon.
+
 RAG
   Retrieval-augmented generation: an AI pattern where the model first looks up relevant project text, then uses that retrieved context to answer or generate. Example: a local wikiSpyder assistant could retrieve Terminology.md, README.md, and tally.csv context before explaining why a link matched.
 

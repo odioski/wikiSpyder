@@ -11,8 +11,8 @@ from threading import Event, RLock
 from typing import Callable
 
 import requests
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QCloseEvent, QResizeEvent
+from PyQt6.QtCore import QSize, Qt, QTimer
+from PyQt6.QtGui import QColor, QCloseEvent, QFont, QIcon, QPainter, QPixmap, QResizeEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
@@ -141,9 +141,9 @@ class MainWindow(QDialog):
 
         self.ui.pushButton.setGeometry(70, 440, 150, 61)
         self.ui.pushButton_2.setGeometry(270, 440, 150, 61)
-        self.ui.pushButton_2.setIcon(
-            self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxQuestion)
-        )
+        self.ui.pushButton_2.setToolTipDuration(10000)
+        self.ui.pushButton_2.setIcon(self._information_icon())
+        self.ui.pushButton_2.setIconSize(QSize(18, 18))
         self.ui.pushButton_3.setGeometry(680, 440, 150, 61)
         self.ui.pushButton_3.setIcon(
             self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView)
@@ -164,6 +164,26 @@ class MainWindow(QDialog):
         self._resize_result_views()
         self._center_bottom_buttons()
         self._center_progress_bar()
+
+    def _information_icon(self) -> QIcon:
+        pixmap = QPixmap(24, 24)
+        pixmap.fill(Qt.GlobalColor.transparent)
+
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setBrush(QColor("#0078d4"))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(2, 2, 20, 20)
+
+        font = QFont()
+        font.setBold(True)
+        font.setPointSize(14)
+        painter.setFont(font)
+        painter.setPen(QColor("#ffffff"))
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "i")
+        painter.end()
+
+        return QIcon(pixmap)
 
     def _connect_signals(self) -> None:
         self.ui.subject_url.textChanged.connect(self.disco_subject)
@@ -557,15 +577,15 @@ class MainWindow(QDialog):
 
         self.ui.label_4.setText("Launching spider...")
         self._start_worker(
-            lambda: self._run_reference_and_image_operation(
+            lambda: self._run_reference_operation(
                 global_state.wikipedia_url,
                 global_state.search_terms,
                 cancelled_links_text="Spider stopped by user.",
             ),
-            "Finding images...",
+            "Finding reference links...",
         )
 
-    def _run_reference_and_image_operation(
+    def _run_reference_operation(
         self,
         subject_url: str,
         search_terms: list[str],
@@ -579,26 +599,11 @@ class MainWindow(QDialog):
         if self._stop_requested or self._stop_event.is_set():
             return (
                 cancelled_links_text,
-                self._format_download_output() + "Operation cancelled.",
+                "Operation cancelled.",
                 False,
             )
 
-        probe_links = (
-            global_state.matched_links
-            if global_state.matched_links
-            else global_state.fixed_links
-        )
-        if probe_links:
-            self._find_images_core(probe_links)
-
-        if self._stop_requested or self._stop_event.is_set():
-            return (
-                self.format_links(result),
-                self._format_download_output() + "Operation cancelled.",
-                False,
-            )
-
-        return self.format_links(result), self._format_download_output() + self.tally_links(), False
+        return self.format_links(result), self.tally_links(), False
 
     def update_tally_view(self) -> None:
         self.ui.label_5.setText(self.tally_links())
@@ -719,7 +724,6 @@ class MainWindow(QDialog):
             base_links,
             self._get_with_responsive_stop,
             lambda: self._stop_requested or self._stop_event.is_set(),
-            max_depth=2,
         )
         if self._stop_requested or self._stop_event.is_set():
             return None, self._format_download_output() + "Operation cancelled.", False
@@ -757,23 +761,11 @@ class MainWindow(QDialog):
         )
 
     def tally_links(self) -> str:
-        matched_by_content = [
-            link
-            for link, counts in global_state.link_term_counts.items()
-            if sum(counts.values())
-        ]
-        matched_count = (
-            len(matched_by_content)
-            if global_state.search_terms
-            else len(global_state.matched_links)
-        )
-        total_term_hits = sum(global_state.term_totals.values())
-
         return (
             "<h2>Links Found Tally</h2>"
             f"<p>Found Links = {len(global_state.fixed_links)}</p>"
-            f"<p>Matched Links = {matched_count}</p>"
-            f"<p>Search Term Hits = {total_term_hits}</p>"
+            f"<p>Matched Links = {self._matched_links_count()}</p>"
+            f"<p>Search Term Hits = {self._search_term_hits_count()}</p>"
             f"<p>Tally File = {html.escape(os.path.basename(TALLY_FILE))}</p>"
             f"{self._format_tally_events()}"
             f"{self._format_term_totals()}"
@@ -781,6 +773,21 @@ class MainWindow(QDialog):
             f"<p>Images Found = {len(global_state.image_urls)}</p>"
             f"<p>Images Saved = {len(global_state.images)}</p>"
         )
+
+    @staticmethod
+    def _matched_links_count() -> int:
+        matched_by_content = [
+            link
+            for link, counts in global_state.link_term_counts.items()
+            if sum(counts.values())
+        ]
+        if matched_by_content:
+            return len(matched_by_content)
+        return len(global_state.matched_links)
+
+    @staticmethod
+    def _search_term_hits_count() -> int:
+        return sum(global_state.term_totals.values())
 
     def _record_link_term_counts(self, url: str, page_text: str) -> None:
         if not global_state.search_terms:

@@ -296,6 +296,11 @@ Core app behavior methods.
 
 Example: `refresh_current_view()`, `spyder_1st_run()`, `find_images()`, and `tally_links()` carry the main workflows.
 
+### deterministic
+Predictable behavior that does not vary by platform defaults or incidental runtime state.
+
+Example: the Deep Probe tooltip uses a custom-drawn circular information icon so it stays circular instead of depending on the operating system's standard icon.
+
 ### validation
 Checks proving the change works.
 

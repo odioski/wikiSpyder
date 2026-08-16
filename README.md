@@ -2,7 +2,10 @@
 
 Advanced Wikipedia Search Tool
 
-Codename: **Michelle**
+> [!IMPORTANT]
+> **Codename: Michelle**
+>
+> wikiSpyder 0.9.2 is the Michelle build.
 
 # ABOUT wikiSpyder
 The goal of this app/utility is to assist users, researchers and investigators of any kind, as well as students, journalists, or anyone who likes to use Wikipedia while searching for information. 

@@ -52,7 +52,7 @@
     </rect>
    </property>
    <property name="toolTip">
-    <string>If pressed crawl recursively into each listed website if permitted or plausible, and as deep as the target will allow.</string>
+    <string>&lt;p style=&quot;white-space: normal; width: 300px;&quot;&gt;If pressed, wikiSpyder will crawl recursively into each listed website if permitted or plausible, and as deep as the target will allow.&lt;/p&gt;</string>
    </property>
    <property name="text">
     <string>Deep Probe</string>
