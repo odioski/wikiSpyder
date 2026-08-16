@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QScrollArea,
+    QStyle,
 )
 
 from app_state import (
@@ -136,6 +137,9 @@ class MainWindow(QDialog):
 
         self.ui.pushButton.setGeometry(70, 440, 150, 61)
         self.ui.pushButton_2.setGeometry(270, 440, 150, 61)
+        self.ui.pushButton_2.setIcon(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxQuestion)
+        )
         self.ui.pushButton_3.setGeometry(680, 440, 150, 61)
 
         for label in (self.ui.label_4, self.ui.label_5):

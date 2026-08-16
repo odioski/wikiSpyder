@@ -51,6 +51,9 @@
      <height>61</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>If pressed crawl recursively into each listed website if permitted or plausible, and as deep as the target will allow.</string>
+   </property>
    <property name="text">
     <string>Deep Probe</string>
    </property>
