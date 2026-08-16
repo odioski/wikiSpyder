@@ -1,5 +1,3 @@
-# Direct runtime dependencies for wikiSpyder.
-# Transitive dependencies are intentionally omitted; pip will resolve them.
 aiohttp==3.13.3
 beautifulsoup4==4.14.3
 Pillow==12.1.1

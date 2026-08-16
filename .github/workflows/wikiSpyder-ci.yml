@@ -1,0 +1,138 @@
+name: wikiSpyder CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  checks:
+    name: Python 3.12 / ${{ matrix.dependency-mode }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        dependency-mode:
+          - pinned
+          - latest-pillow-aiohttp
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install system libraries for PyQt offscreen checks
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libgl1 libxkbcommon-x11-0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install pinned Python dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install -r requirements.txt
+
+      - name: Upgrade Pillow and aiohttp for dependency drift check
+        if: matrix.dependency-mode == 'latest-pillow-aiohttp'
+        run: |
+          python -m pip install --upgrade Pillow aiohttp
+          python -m pip freeze | sort
+
+      - name: Check installed package consistency
+        run: python -m pip check
+
+      - name: Compile application modules
+        run: python -m py_compile __main__.py main.py newwindow.py setup.py
+
+      - name: Import application and dependency modules
+        run: python -c "import aiohttp, main, newwindow; from PIL import Image"
+
+      - name: Smoke test Pillow image verify and save behavior
+        run: |
+          python - <<'PY'
+          from io import BytesIO
+          from PIL import Image
+
+          buffer = BytesIO()
+          Image.new("RGB", (1, 1), "white").save(buffer, format="PNG")
+          data = buffer.getvalue()
+
+          with Image.open(BytesIO(data)) as image:
+              image.verify()
+          with Image.open(BytesIO(data)) as image:
+              output = BytesIO()
+              image.save(output, format="PNG")
+              assert output.getvalue()
+          PY
+
+      - name: Smoke test aiohttp session creation
+        run: |
+          python - <<'PY'
+          import asyncio
+          import aiohttp
+
+          async def main():
+              async with aiohttp.ClientSession() as session:
+                  assert not session.closed
+
+          asyncio.run(main())
+          PY
+
+      - name: Launch PyQt window offscreen
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python - <<'PY'
+          from PyQt6.QtCore import QTimer
+          from PyQt6.QtWidgets import QApplication
+          import main
+
+          app = QApplication([])
+          window = main.MainWindow()
+          window.show()
+          QTimer.singleShot(0, window.close)
+          QTimer.singleShot(0, app.quit)
+          raise SystemExit(app.exec())
+          PY
+
+      - name: Smoke test Tally CSV and progress state
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python - <<'PY'
+          import os
+          import tempfile
+          from PyQt6.QtWidgets import QApplication
+          import main
+
+          app = QApplication([])
+          fd, path = tempfile.mkstemp(suffix=".csv")
+          os.close(fd)
+          os.remove(path)
+          main.TALLY_FILE = path
+
+          window = main.MainWindow()
+          main.global_state.search_terms = ["alpha", "beta"]
+          window._set_tally_query("url1", ["alpha", "beta"])
+          window._record_tally_event("Launch")
+          window._record_link_term_counts(
+              "https://example.test/a",
+              "Alpha beta alpha.",
+          )
+          assert main.global_state.term_totals == {"alpha": 2, "beta": 1}
+
+          window._set_operation_active(True)
+          assert window._progress_timer.isActive()
+          window._set_operation_active(False)
+          assert not window._progress_timer.isActive()
+
+          os.remove(path)
+          PY
