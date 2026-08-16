@@ -8,3 +8,11 @@ pyvenv.cfg
 
 # Shell history files
 .bash_history
+
+# Local developer artifacts
+.agents/
+.codex/
+artifacts/
+boot/
+dev/
+node_modules/
