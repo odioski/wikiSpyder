@@ -145,6 +145,9 @@ class MainWindow(QDialog):
             self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxQuestion)
         )
         self.ui.pushButton_3.setGeometry(680, 440, 150, 61)
+        self.ui.pushButton_3.setIcon(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView)
+        )
 
         for label in (self.ui.label_4, self.ui.label_5):
             label.setWordWrap(True)

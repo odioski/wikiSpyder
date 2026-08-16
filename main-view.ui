@@ -67,6 +67,9 @@
      <height>61</height>
     </rect>
    </property>
+   <property name="toolTip">
+    <string>Find and open images from the matched links.</string>
+   </property>
    <property name="text">
     <string>View Images</string>
    </property>

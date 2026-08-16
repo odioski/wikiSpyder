@@ -68,6 +68,7 @@ class Ui_Dialog(object):
         self.pushButton.setText(_translate("Dialog", "Launch"))
         self.pushButton_2.setToolTip(_translate("Dialog", "If pressed crawl recursively into each listed website if permitted or plausible, and as deep as the target will allow."))
         self.pushButton_2.setText(_translate("Dialog", "Deep Probe"))
+        self.pushButton_3.setToolTip(_translate("Dialog", "Find and open images from the matched links."))
         self.pushButton_3.setText(_translate("Dialog", "View Images"))
         self.subject_url.setPlaceholderText(_translate("Dialog", "wikipedia.org/wiki/YourFavoriteStar"))
         self.lineEdit_2.setPlaceholderText(_translate("Dialog", "TYPE or DROP your search terms here; use csv or txt file if it\'s a long list."))
