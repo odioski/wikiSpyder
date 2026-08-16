@@ -2,6 +2,8 @@
 
 Advanced Wikipedia Search Tool
 
+Codename: **Michelle**
+
 # ABOUT wikiSpyder
 The goal of this app/utility is to assist users, researchers and investigators of any kind, as well as students, journalists, or anyone who likes to use Wikipedia while searching for information. 
 What it will do is scrape the REFERENCES section posted last in most Wikipedia search result pages. After which wikiSpyder can be deployed to crawl the URLs (websites) or the list of links that were scraped from the REFERENCE sections.
@@ -24,7 +26,7 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
 
 # Installation
 
-wikiSpyder 0.3.1 targets **Python 3.12**.
+wikiSpyder 0.3.1, Codename Michelle, targets **Python 3.12**.
 
 Clone the repository and create a virtual environment:
 
@@ -86,5 +88,4 @@ If you would like to see additional features added or have a suggestion, you can
 
 
 ...
-
 

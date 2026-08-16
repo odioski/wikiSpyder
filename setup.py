@@ -3,7 +3,15 @@ from setuptools import setup
 setup(
     name="wikiSpyder",
     version="0.3.1",
-    py_modules=["main", "newwindow"],
+    py_modules=[
+        "app_state",
+        "image_probe",
+        "image_viewer",
+        "main",
+        "newwindow",
+        "scraping",
+        "worker",
+    ],
     install_requires=[
         "aiohttp==3.13.3",
         "beautifulsoup4==4.14.3",
@@ -18,6 +26,6 @@ setup(
     },
     author="Omar Daniels",
     author_email="link92@bookmotives.com",
-    description="A web scraping tool that finds and displays images from the references secition found in most wikipedia search results landing pages.",
+    description="wikiSpyder 0.3.1, Codename Michelle: a web scraping tool that finds and displays images from Wikipedia reference pages.",
     url="https://github.com/odioski",
 )

@@ -6,70 +6,36 @@ import os
 import re
 import shutil
 import sys
-from collections import deque
-from dataclasses import dataclass, field
-from io import BytesIO
-from urllib.parse import urljoin
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+from threading import Event, RLock
+from typing import Callable
 
 import requests
-from bs4 import BeautifulSoup
-from PIL import Image, UnidentifiedImageError
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QCloseEvent, QPixmap, QResizeEvent
+from PyQt6.QtGui import QCloseEvent, QResizeEvent
 from PyQt6.QtWidgets import (
     QApplication,
-    QCheckBox,
     QDialog,
     QFileDialog,
-    QHBoxLayout,
-    QLabel,
     QMessageBox,
     QProgressBar,
     QPushButton,
     QScrollArea,
-    QVBoxLayout,
-    QWidget,
 )
 
+from app_state import (
+    APP_DISPLAY_NAME,
+    IMG_DIR,
+    TALLY_FILE,
+    USER_AGENT,
+    global_state,
+    normalize_subject_url,
+)
+from image_probe import ImageProbe
+from image_viewer import launch_image_viewer
 from newwindow import Ui_Dialog
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-IMG_DIR = os.path.join(BASE_DIR, "saved_images")
-TALLY_FILE = os.path.join(BASE_DIR, "tally.csv")
-USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/131.0.0.0 Safari/537.36"
-)
-IMAGE_PATTERN = re.compile(r"\.(?:jpg|jpeg|png|gif|webp)(?:$|[?#])", re.IGNORECASE)
-
-os.makedirs(IMG_DIR, exist_ok=True)
-
-
-@dataclass
-class GlobalState:
-    found_links: list[str] = field(default_factory=list)
-    search_terms: list[str] = field(default_factory=list)
-    wikipedia_url: str = ""
-    tally_wikipedia_url: str = ""
-    tally_search_terms: list[str] = field(default_factory=list)
-    matched_links: list[str] = field(default_factory=list)
-    images: list[tuple[str, str]] = field(default_factory=list)
-    image_urls: list[str] = field(default_factory=list)
-    messages: list[str] = field(default_factory=list)
-    fixed_links: list[str] = field(default_factory=list)
-    link_term_counts: dict[str, dict[str, int]] = field(default_factory=dict)
-    term_totals: dict[str, int] = field(default_factory=dict)
-    tally_events: list[str] = field(default_factory=list)
-
-
-global_state = GlobalState()
-
-
-class ClickableImageLabel(QLabel):
-    def __init__(self, url: str, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self._url = url
+from scraping import deep_probe_links, scrape_wikipedia_references
+from worker import OperationWorker
 
 
 class MainWindow(QDialog):
@@ -78,13 +44,19 @@ class MainWindow(QDialog):
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
         self._stop_requested = False
+        self._stop_event = Event()
+        self._state_lock = RLock()
         self._operation_active = False
         self._kill_event: asyncio.Event | None = None
+        self._async_loop: asyncio.AbstractEventLoop | None = None
+        self._worker: OperationWorker | None = None
+        self._download_output: list[str] = []
         self._progress_value = 0
         self._progress_direction = 1
         self._progress_timer = QTimer(self)
         self._progress_timer.setInterval(18)
         self._progress_timer.timeout.connect(self._animate_progress_bar)
+        self._network_executor = ThreadPoolExecutor(max_workers=12)
         self.stop_button = None
         self.progress_bar = None
         self.links_scroll_area = None
@@ -105,7 +77,8 @@ class MainWindow(QDialog):
         self._connect_signals()
 
     def _configure_ui(self) -> None:
-        self.setWindowTitle("wikiSpyder 0.3.1")
+        self.setWindowTitle(APP_DISPLAY_NAME)
+        self.ui.label_3.setText(APP_DISPLAY_NAME)
 
         self.ui.buttonBox.hide()
         self.ui.verticalScrollBar.hide()
@@ -200,6 +173,41 @@ class MainWindow(QDialog):
             self._start_progress_bar()
         else:
             self._stop_progress_bar()
+
+    def _start_worker(
+        self,
+        operation: Callable[[], tuple[str | None, str | None, bool]],
+        status: str,
+    ) -> None:
+        if self._operation_active:
+            return
+
+        self._stop_requested = False
+        self._stop_event.clear()
+        self._set_operation_active(True)
+        self.ui.label_5.setText(status)
+
+        worker = OperationWorker(operation, self)
+        self._worker = worker
+        worker.links_changed.connect(self.ui.label_4.setText)
+        worker.tally_changed.connect(self.ui.label_5.setText)
+        worker.output_changed.connect(self.ui.label_5.setText)
+        worker.failed.connect(self._worker_failed)
+        worker.operation_finished.connect(self._worker_finished)
+        worker.operation_finished.connect(worker.deleteLater)
+        worker.failed.connect(worker.deleteLater)
+        worker.start()
+
+    def _worker_failed(self, message: str) -> None:
+        self.ui.label_5.setText(f"An error occurred: {message}")
+        self._worker = None
+        self._set_operation_active(False)
+
+    def _worker_finished(self, stopped: bool, show_viewer: bool) -> None:
+        self._worker = None
+        self._set_operation_active(False)
+        if show_viewer and not stopped:
+            launch_image_viewer(self, global_state.images)
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
@@ -316,17 +324,25 @@ class MainWindow(QDialog):
         global_state.tally_search_terms = list(search_terms)
 
     def _record_tally_event(self, event: str) -> None:
-        global_state.tally_events.append(event)
-        self._save_tally_file()
+        with self._state_lock:
+            global_state.tally_events.append(event)
+            self._save_tally_file()
 
     def _save_tally_file(self) -> None:
+        with self._state_lock:
+            events = list(global_state.tally_events)
+            link_term_counts = {
+                url: dict(counts)
+                for url, counts in global_state.link_term_counts.items()
+            }
+
         try:
             with open(TALLY_FILE, "w", encoding="utf-8", newline="") as file:
                 writer = csv.writer(file)
                 writer.writerow(["kind", "url", "term", "count"])
-                for event in global_state.tally_events:
+                for event in events:
                     writer.writerow(["event", "", event, ""])
-                for url, counts in global_state.link_term_counts.items():
+                for url, counts in link_term_counts.items():
                     for term, count in counts.items():
                         writer.writerow(["term_count", url, term, count])
         except OSError as exc:
@@ -365,18 +381,19 @@ class MainWindow(QDialog):
         self._rebuild_term_totals()
 
     def _rebuild_term_totals(self) -> None:
-        global_state.term_totals.clear()
-        for counts in global_state.link_term_counts.values():
-            for term, count in counts.items():
-                global_state.term_totals[term] = (
-                    global_state.term_totals.get(term, 0) + count
-                )
+        with self._state_lock:
+            global_state.term_totals.clear()
+            for counts in global_state.link_term_counts.values():
+                for term, count in counts.items():
+                    global_state.term_totals[term] = (
+                        global_state.term_totals.get(term, 0) + count
+                    )
 
     def refresh_current_view(self) -> None:
         if self._operation_active:
             return
 
-        subject_url = self._normalize_subject_url(self.ui.subject_url.text())
+        subject_url = normalize_subject_url(self.ui.subject_url.text())
         search_terms = [
             term
             for term in re.split(r"[\s,]+", self.ui.lineEdit_2.text().strip())
@@ -394,44 +411,32 @@ class MainWindow(QDialog):
         global_state.wikipedia_url = subject_url
         global_state.search_terms = search_terms
 
-        self._stop_requested = False
         self._clear_runtime_state(reset_tally=not same_query)
         self._set_tally_query(subject_url, search_terms)
         if same_query:
             self._load_tally_file()
         self._record_tally_event("Refresh")
         self.cleanup_images()
-        self._set_operation_active(True)
-
-        result = self.scrape_wikipedia_references(subject_url, search_terms)
-        self.ui.label_4.setText(self.format_links(result))
-        QApplication.processEvents()
-
-        probe_links = (
-            global_state.matched_links
-            if global_state.matched_links
-            else global_state.fixed_links
+        self._start_worker(
+            lambda: self._run_reference_and_image_operation(
+                subject_url,
+                search_terms,
+                cancelled_links_text="Operation cancelled.",
+            ),
+            "Refreshing images...",
         )
-        self.ui.label_5.setText("Refreshing images...")
-        QApplication.processEvents()
-
-        self.find_images(probe_links)
-
-        if self._stop_requested:
-            self.ui.label_5.setText("Operation cancelled.")
-            self._set_operation_active(False)
-            return
-
-        self.ui.label_5.setText(self.tally_links())
-        self._set_operation_active(False)
 
     def stop_current_operation(self) -> None:
         self.kill_current_operation()
 
     def kill_current_operation(self, record_event: bool = True) -> None:
         self._stop_requested = True
+        self._stop_event.set()
         if self._kill_event is not None:
-            self._kill_event.set()
+            if self._async_loop is not None:
+                self._async_loop.call_soon_threadsafe(self._kill_event.set)
+            else:
+                self._kill_event.set()
         self.stop_button.setEnabled(False)
         self.refresh_button.setEnabled(False)
         if record_event:
@@ -439,8 +444,63 @@ class MainWindow(QDialog):
         self.ui.label_5.setText("Killing current operation...")
         QApplication.processEvents()
 
+    def _set_stop_requested(self, requested: bool) -> None:
+        self._stop_requested = requested
+
+    def _set_kill_event(self, kill_event: asyncio.Event | None) -> None:
+        self._kill_event = kill_event
+
+    def _get_with_responsive_stop(
+        self, url: str, timeout: int | tuple[int, int]
+    ) -> requests.Response | None:
+        future = self._network_executor.submit(
+            requests.get,
+            url,
+            headers={"User-Agent": USER_AGENT},
+            timeout=timeout,
+        )
+        while True:
+            try:
+                return future.result(timeout=0.05)
+            except FutureTimeoutError:
+                if self._stop_requested or self._stop_event.is_set():
+                    future.cancel()
+                    return None
+
+    def _run_async_with_responsive_stop(self, coro) -> None:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        self._async_loop = loop
+        task = loop.create_task(coro)
+        try:
+            while not task.done():
+                loop.run_until_complete(asyncio.sleep(0.05))
+                if (
+                    (self._stop_requested or self._stop_event.is_set())
+                    and self._kill_event is not None
+                ):
+                    self._kill_event.set()
+            loop.run_until_complete(task)
+        finally:
+            pending = [
+                pending_task
+                for pending_task in asyncio.all_tasks(loop)
+                if not pending_task.done()
+            ]
+            for pending_task in pending:
+                pending_task.cancel()
+            if pending:
+                loop.run_until_complete(
+                    asyncio.gather(*pending, return_exceptions=True)
+                )
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            if self._async_loop is loop:
+                self._async_loop = None
+            asyncio.set_event_loop(None)
+            loop.close()
+
     def disco_subject(self, text: str) -> None:
-        global_state.wikipedia_url = self._normalize_subject_url(text)
+        global_state.wikipedia_url = normalize_subject_url(text)
         if not global_state.wikipedia_url:
             self.ui.label_4.setText("Please fill in the form...")
 
@@ -497,43 +557,10 @@ class MainWindow(QDialog):
                 self, "Error", f"Failed to save images: {exc}"
             )
 
-    def save_selected_images(self, selected_images: list[str]) -> None:
-        folder_path = QFileDialog.getExistingDirectory(
-            self, "Select Folder to Save Images"
-        )
-        if not folder_path:
-            return
-
-        try:
-            for image_path in selected_images:
-                if not os.path.isfile(image_path):
-                    continue
-
-                default_name = os.path.join(
-                    folder_path, os.path.basename(image_path)
-                )
-                filename, _ = QFileDialog.getSaveFileName(
-                    self,
-                    "Save Image As",
-                    default_name,
-                    "Images (*.png *.xpm *.jpg *.jpeg *.gif *.webp)",
-                )
-                if filename:
-                    shutil.copy(image_path, filename)
-            QMessageBox.information(
-                self, "Success", f"Selected images saved to {folder_path}"
-            )
-        except OSError as exc:
-            QMessageBox.critical(
-                self, "Error", f"Failed to save images: {exc}"
-            )
-
     def spyder_1st_run(self) -> None:
         if self._operation_active:
             return
 
-        self._stop_requested = False
-        self._set_operation_active(True)
         self._clear_runtime_state(reset_tally=True)
         self._set_tally_query(
             global_state.wikipedia_url,
@@ -543,345 +570,128 @@ class MainWindow(QDialog):
 
         if not global_state.wikipedia_url:
             self.ui.label_4.setText("No subject URL found...")
-            self._set_operation_active(False)
             return
 
         self.ui.label_4.setText("Launching spider...")
-        QApplication.processEvents()
-
-        result = self.scrape_wikipedia_references(
-            global_state.wikipedia_url,
-            global_state.search_terms,
+        self._start_worker(
+            lambda: self._run_reference_and_image_operation(
+                global_state.wikipedia_url,
+                global_state.search_terms,
+                cancelled_links_text="Spider stopped by user.",
+            ),
+            "Finding images...",
         )
-        if self._stop_requested:
-            self.ui.label_4.setText("Spider stopped by user.")
-            self.ui.label_5.setText("Operation cancelled.")
-            self._set_operation_active(False)
-            return
 
-        self.ui.label_4.setText(self.format_links(result))
-        QApplication.processEvents()
+    def _run_reference_and_image_operation(
+        self,
+        subject_url: str,
+        search_terms: list[str],
+        cancelled_links_text: str,
+    ) -> tuple[str | None, str | None, bool]:
+        result = scrape_wikipedia_references(
+            subject_url,
+            search_terms,
+            self._get_with_responsive_stop,
+        )
+        if self._stop_requested or self._stop_event.is_set():
+            return (
+                cancelled_links_text,
+                self._format_download_output() + "Operation cancelled.",
+                False,
+            )
 
         probe_links = (
             global_state.matched_links
             if global_state.matched_links
             else global_state.fixed_links
         )
-        if not probe_links:
-            self.ui.label_5.setText(self.tally_links())
-            self._set_operation_active(False)
-            return
+        if probe_links:
+            self._find_images_core(probe_links)
 
-        self.ui.label_5.setText("Finding images...")
-        QApplication.processEvents()
-        self.find_images(probe_links)
-
-        if self._stop_requested:
-            self.ui.label_5.setText("Operation cancelled.")
-            self._set_operation_active(False)
-            return
-
-        self.ui.label_5.setText(self.tally_links())
-        self._set_operation_active(False)
-
-    def scrape_wikipedia_references(
-        self, url: str, search_terms: list[str]
-    ) -> list[str]:
-        try:
-            response = requests.get(
-                url,
-                headers={"User-Agent": USER_AGENT},
-                timeout=30,
-            )
-            response.raise_for_status()
-        except requests.RequestException as exc:
-            return [f"Request error: {exc}"]
-
-        try:
-            soup = BeautifulSoup(response.content, "html.parser")
-            references_section = soup.find("ol", class_="references") or soup.find(
-                "div",
-                class_="reflist reflist-columns references-column-width",
-            )
-            if references_section is None:
-                global_state.found_links = []
-                global_state.fixed_links = []
-                global_state.matched_links = []
-                return ["No references section found."]
-
-            fixed_links: list[str] = []
-            for tag in references_section.find_all("a", href=True):
-                href = str(tag.get("href", "")).strip()
-                if not href:
-                    continue
-                if href.startswith("http://") or href.startswith("https://"):
-                    fixed_links.append(href)
-                elif href.startswith("//"):
-                    fixed_links.append(f"https:{href}")
-                else:
-                    fixed_links.append(urljoin("https://en.wikipedia.org", href))
-
-            global_state.found_links = fixed_links
-            global_state.fixed_links = fixed_links
-
-            lowered_terms = [term.lower() for term in search_terms]
-            if not lowered_terms:
-                global_state.matched_links = []
-                return fixed_links
-
-            matched_links = [
-                link
-                for link in fixed_links
-                if any(term in link.lower() for term in lowered_terms)
-            ]
-            global_state.matched_links = matched_links
+        if self._stop_requested or self._stop_event.is_set():
             return (
-                matched_links
-                if matched_links
-                else ["No matching links found in references."]
+                self.format_links(result),
+                self._format_download_output() + "Operation cancelled.",
+                False,
             )
-        except Exception as exc:
-            return [f"An error occurred: {exc}"]
 
-    async def download_image(
-        self,
-        session: requests.Session,
-        url: str,
-        semaphore: asyncio.Semaphore,
-        kill_event: asyncio.Event,
-    ) -> None:
-        async with semaphore:
-            if kill_event.is_set() or self._stop_requested:
-                return
-
-            try:
-                response = await asyncio.to_thread(
-                    session.get,
-                    url,
-                    headers={"User-Agent": USER_AGENT},
-                    timeout=60,
-                )
-                response.raise_for_status()
-                page_html = response.text
-            except requests.RequestException as exc:
-                global_state.messages.append(f"Skipping {url}: {exc}")
-                return
-
-            if kill_event.is_set() or self._stop_requested:
-                return
-
-            soup = BeautifulSoup(page_html, "html.parser")
-            self._record_link_term_counts(url, soup.get_text(" "))
-            self.update_tally_view()
-            QApplication.processEvents()
-
-            discovered_urls: list[str] = []
-            for tag in soup.find_all("img", src=True):
-                if kill_event.is_set() or self._stop_requested:
-                    return
-                src = str(tag.get("src", "")).strip()
-                image_url = self._normalize_image_url(src, url)
-                if not image_url or image_url in global_state.image_urls:
-                    continue
-                global_state.image_urls.append(image_url)
-                discovered_urls.append(image_url)
-
-            for image_url in discovered_urls:
-                if kill_event.is_set() or self._stop_requested:
-                    return
-                try:
-                    img_response = await asyncio.to_thread(
-                        session.get,
-                        image_url,
-                        headers={"User-Agent": USER_AGENT},
-                        timeout=60,
-                    )
-                    img_response.raise_for_status()
-                    img_data = img_response.content
-                except requests.RequestException:
-                    continue
-
-                if kill_event.is_set() or self._stop_requested:
-                    return
-
-                output_path = self._build_image_path(image_url)
-                try:
-                    with Image.open(BytesIO(img_data)) as image:
-                        image.verify()
-                    with Image.open(BytesIO(img_data)) as image:
-                        image.save(output_path)
-                except (UnidentifiedImageError, OSError):
-                    continue
-
-                global_state.images.append((output_path, image_url))
-
-    async def find_images_async(self, urls: list[str]) -> None:
-        if not urls:
-            return
-
-        semaphore = asyncio.Semaphore(10)
-        urls = list(dict.fromkeys(urls))
-        kill_event = asyncio.Event()
-        self._kill_event = kill_event
-        try:
-            with requests.Session() as session:
-                tasks = [
-                    asyncio.create_task(
-                        self.download_image(session, url, semaphore, kill_event)
-                    )
-                    for url in urls
-                ]
-                probe_task = asyncio.ensure_future(
-                    asyncio.gather(*tasks, return_exceptions=True)
-                )
-                kill_task = asyncio.create_task(kill_event.wait())
-                done, _ = await asyncio.wait(
-                    [probe_task, kill_task],
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-
-                if kill_task in done:
-                    self._stop_requested = True
-                    for task in tasks:
-                        task.cancel()
-                    probe_task.cancel()
-                    await asyncio.gather(probe_task, return_exceptions=True)
-                    return
-
-                kill_task.cancel()
-                await asyncio.gather(kill_task, return_exceptions=True)
-        finally:
-            if self._kill_event is kill_event:
-                self._kill_event = None
+        return self.format_links(result), self._format_download_output() + self.tally_links(), False
 
     def update_tally_view(self) -> None:
         self.ui.label_5.setText(self.tally_links())
 
-    def find_images(self, urls: list[str]) -> list[tuple[str, str]]:
-        self._stop_requested = False
+    def _find_images_core(self, urls: list[str]) -> list[tuple[str, str]]:
         self._kill_event = None
-        self._set_operation_active(True)
-        self.cleanup_images()
         global_state.messages.clear()
         global_state.image_urls.clear()
+        with self._state_lock:
+            self._download_output.clear()
 
         if not urls:
-            self.ui.label_5.setText("No links available for image probing.")
-            self._set_operation_active(False)
             return []
 
-        self.ui.label_5.setText("Finding images...")
-        QApplication.processEvents()
-
-        try:
-            asyncio.run(self.find_images_async(urls))
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            try:
-                loop.run_until_complete(self.find_images_async(urls))
-            finally:
-                loop.close()
-        except Exception as exc:
-            self.ui.label_5.setText(f"An error occurred: {exc}")
-            self._set_operation_active(False)
-            return []
-
-        if self._stop_requested:
-            self.ui.label_5.setText("Image search stopped by user.")
-            self._set_operation_active(False)
-            return []
-
-        self.update_tally_view()
-        self._set_operation_active(False)
+        probe = ImageProbe(
+            self._state_lock,
+            self._stop_event,
+            lambda: self._stop_requested,
+            self._set_stop_requested,
+            self._set_kill_event,
+            self._record_link_term_counts,
+            self._append_download_output,
+        )
+        self._run_async_with_responsive_stop(probe.find_images_async(urls))
         return global_state.images
 
-    def launch_image_viewer(self) -> None:
-        if not global_state.images:
-            QMessageBox.information(self, "Images", "No images found to display.")
-            return
+    def find_images(self, urls: list[str]) -> list[tuple[str, str]]:
+        if self._operation_active:
+            return []
 
-        image_dialog = QDialog(self)
-        image_dialog.setWindowTitle("Image Viewer")
+        self.cleanup_images()
+        if not urls:
+            self.ui.label_5.setText("No links available for image probing.")
+            return []
 
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        dialog_widget = QWidget()
-        dialog_layout = QVBoxLayout(dialog_widget)
-        row_layout = QVBoxLayout()
-        row = QHBoxLayout()
-
-        selected_images: list[str] = []
-        checkboxes: list[QCheckBox] = []
-
-        for index, (image_path, image_url) in enumerate(global_state.images, start=1):
-            image_label = ClickableImageLabel(image_url)
-            image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            image_label.setFixedSize(200, 200)
-            image_label.setStyleSheet("border: 1px solid white;")
-
-            pixmap = QPixmap(image_path)
-            if not pixmap.isNull():
-                image_label.setPixmap(
-                    pixmap.scaled(
-                        image_label.size(),
-                        Qt.AspectRatioMode.KeepAspectRatio,
-                        Qt.TransformationMode.SmoothTransformation,
-                    )
-                )
-
-            checkbox = QCheckBox()
-
-            def on_state_changed(state: int, image_path: str = image_path) -> None:
-                is_checked = Qt.CheckState(state) == Qt.CheckState.Checked
-                if is_checked:
-                    if image_path not in selected_images:
-                        selected_images.append(image_path)
-                elif image_path in selected_images:
-                    selected_images.remove(image_path)
-
-            checkbox.stateChanged.connect(on_state_changed)
-            checkboxes.append(checkbox)
-
-            image_layout = QVBoxLayout()
-            image_layout.addWidget(image_label)
-            image_layout.addWidget(checkbox)
-            row.addLayout(image_layout)
-
-            if index % 5 == 0:
-                row_layout.addLayout(row)
-                row = QHBoxLayout()
-
-        if global_state.images and len(global_state.images) % 5 != 0:
-            row_layout.addLayout(row)
-
-        dialog_layout.addLayout(row_layout)
-        dialog_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        scroll_area.setWidget(dialog_widget)
-
-        image_dialog_layout = QVBoxLayout(image_dialog)
-        image_dialog_layout.addWidget(scroll_area)
-
-        select_all_checkbox = QCheckBox("Select All")
-
-        def select_all_images(state: int) -> None:
-            is_checked = Qt.CheckState(state) == Qt.CheckState.Checked
-            for checkbox in checkboxes:
-                checkbox.setChecked(is_checked)
-
-        select_all_checkbox.stateChanged.connect(select_all_images)
-        image_dialog_layout.addWidget(select_all_checkbox)
-
-        save_button = QPushButton("Save Selected Images")
-        save_button.clicked.connect(
-            lambda: self.save_selected_images(selected_images)
+        self._start_worker(
+            lambda: self._run_image_operation(urls, show_viewer=False),
+            "Finding images...",
         )
-        image_dialog_layout.addWidget(save_button)
+        return []
 
-        image_dialog.setLayout(image_dialog_layout)
-        image_dialog.setFixedWidth(5 * 200 + 40)
-        image_dialog.exec()
+    def _run_image_operation(
+        self, urls: list[str], show_viewer: bool
+    ) -> tuple[str | None, str | None, bool]:
+        self._find_images_core(urls)
+        if self._stop_requested or self._stop_event.is_set():
+            return (
+                None,
+                self._format_download_output() + "Image search stopped by user.",
+                False,
+            )
+        return None, self._format_download_output() + self.tally_links(), show_viewer
+
+    def _append_download_output(self, message: str) -> None:
+        with self._state_lock:
+            self._download_output.append(message)
+            self._download_output = self._download_output[-24:]
+            output_html = self._format_download_output_locked()
+
+        worker = self._worker
+        if worker is not None:
+            worker.output_changed.emit(output_html)
+
+    def _format_download_output(self) -> str:
+        with self._state_lock:
+            return self._format_download_output_locked()
+
+    def _format_download_output_locked(self) -> str:
+        if not self._download_output:
+            return ""
+
+        rows = "".join(
+            f"<li>{html.escape(message)}</li>"
+            for message in self._download_output
+        )
+        return "<h2>Image Download Output</h2><ul>" + rows + "</ul>"
 
     def view_images(self) -> None:
         if self._operation_active:
@@ -893,91 +703,54 @@ class MainWindow(QDialog):
             if global_state.matched_links
             else global_state.fixed_links
         )
-        self.ui.label_5.setText("Finding images in matched links...")
-        QApplication.processEvents()
-        self.find_images(links)
-        self.update_tally_view()
-        self.launch_image_viewer()
+        self.cleanup_images()
+        if not links:
+            self.ui.label_5.setText("No links available for image probing.")
+            return
 
-    def _deep_probe_links(self, start_urls: list[str], max_depth: int = 2) -> list[str]:
-        if not start_urls:
-            return []
-
-        queue: deque[tuple[str, int]] = deque((url, 0) for url in start_urls if url)
-        visited: set[str] = set()
-        discovered: list[str] = []
-
-        while queue:
-            if self._stop_requested:
-                break
-
-            current_url, depth = queue.popleft()
-            normalized = current_url.split("#", 1)[0].strip()
-            if not normalized or normalized in visited or depth > max_depth:
-                continue
-
-            visited.add(normalized)
-            discovered.append(normalized)
-
-            try:
-                response = requests.get(
-                    normalized,
-                    headers={"User-Agent": USER_AGENT},
-                    timeout=20,
-                )
-                response.raise_for_status()
-            except requests.RequestException:
-                continue
-
-            try:
-                soup = BeautifulSoup(response.content, "html.parser")
-            except Exception:
-                continue
-
-            for tag in soup.find_all("a", href=True):
-                href = str(tag.get("href", "")).strip()
-                if not href or href.startswith("#"):
-                    continue
-                candidate = href
-                if candidate.startswith("//"):
-                    candidate = f"https:{candidate}"
-                elif not candidate.startswith(("http://", "https://")):
-                    candidate = urljoin(normalized, candidate)
-
-                if not candidate.startswith(("http://", "https://")):
-                    continue
-                next_url = candidate.split("#", 1)[0].strip()
-                if next_url not in visited:
-                    queue.append((next_url, depth + 1))
-
-        return discovered
+        self._start_worker(
+            lambda: self._run_image_operation(links, show_viewer=True),
+            "Finding images in matched links...",
+        )
 
     def deep_probe_view(self) -> None:
         if self._operation_active:
             return
 
-        self._set_operation_active(True)
         self._record_tally_event("Deep Probe")
         base_links = (
             global_state.matched_links
             if global_state.matched_links
             else global_state.fixed_links
         )
-        self.ui.label_5.setText("Deep probing reference pages...")
-        QApplication.processEvents()
+        self.cleanup_images()
+        self._start_worker(
+            lambda: self._run_deep_probe_operation(base_links),
+            "Deep probing reference pages...",
+        )
 
-        deep_links = self._deep_probe_links(base_links, max_depth=2)
-        if self._stop_requested:
-            self.ui.label_5.setText("Operation cancelled.")
-            self._set_operation_active(False)
-            return
+    def _run_deep_probe_operation(
+        self, base_links: list[str]
+    ) -> tuple[str | None, str | None, bool]:
+        deep_links = deep_probe_links(
+            base_links,
+            self._get_with_responsive_stop,
+            lambda: self._stop_requested or self._stop_event.is_set(),
+            max_depth=2,
+        )
+        if self._stop_requested or self._stop_event.is_set():
+            return None, self._format_download_output() + "Operation cancelled.", False
 
         global_state.fixed_links = deep_links
-        self.ui.label_4.setText(self.format_links(deep_links))
-        self.find_images(deep_links)
-        self.update_tally_view()
-        self._set_operation_active(False)
-        self.launch_image_viewer()
+        if deep_links:
+            self._find_images_core(deep_links)
+        if self._stop_requested or self._stop_event.is_set():
+            return (
+                self.format_links(deep_links),
+                self._format_download_output() + "Operation cancelled.",
+                False,
+            )
+        return self.format_links(deep_links), self._format_download_output() + self.tally_links(), True
 
     def format_links(self, links: list[str]) -> str:
         if not links:
@@ -1030,13 +803,14 @@ class MainWindow(QDialog):
         if not global_state.search_terms:
             return
 
-        counts = self._count_search_terms(page_text, global_state.search_terms)
-        global_state.link_term_counts[url] = counts
-        self._rebuild_term_totals()
-        self._save_tally_file()
+        with self._state_lock:
+            counts = self._count_search_terms(page_text, global_state.search_terms)
+            global_state.link_term_counts[url] = counts
+            self._rebuild_term_totals()
+            self._save_tally_file()
 
-        if sum(counts.values()) and url not in global_state.matched_links:
-            global_state.matched_links.append(url)
+            if sum(counts.values()) and url not in global_state.matched_links:
+                global_state.matched_links.append(url)
 
     @staticmethod
     def _count_search_terms(page_text: str, search_terms: list[str]) -> dict[str, int]:
@@ -1104,48 +878,11 @@ class MainWindow(QDialog):
 
     def closeEvent(self, event: QCloseEvent) -> None:
         self.kill_current_operation(record_event=False)
+        if self._worker is not None and self._worker.isRunning():
+            self._worker.wait(1500)
+        self._network_executor.shutdown(wait=False, cancel_futures=True)
         self.cleanup_images()
         event.accept()
-
-    @staticmethod
-    def _normalize_subject_url(text: str) -> str:
-        cleaned = text.strip()
-        if not cleaned:
-            return ""
-        if cleaned.startswith(("http://", "https://")):
-            return cleaned
-        if cleaned.startswith(("wikipedia.org/", "en.wikipedia.org/")):
-            return f"https://{cleaned}"
-        if cleaned.startswith("/wiki/"):
-            return f"https://en.wikipedia.org{cleaned}"
-        return f"https://en.wikipedia.org/wiki/{cleaned.replace(' ', '_')}"
-
-    @staticmethod
-    def _normalize_image_url(src: str, page_url: str) -> str | None:
-        if not src:
-            return None
-        if src.startswith("//"):
-            candidate = f"https:{src}"
-        else:
-            candidate = urljoin(page_url, src)
-        if not IMAGE_PATTERN.search(candidate):
-            return None
-        return candidate
-
-    def _build_image_path(self, image_url: str) -> str:
-        filename = os.path.basename(image_url.split("?", 1)[0].split("#", 1)[0])
-        if not filename:
-            filename = f"image_{len(global_state.images) + 1}.png"
-
-        name, extension = os.path.splitext(filename)
-        extension = extension or ".png"
-        candidate = os.path.join(IMG_DIR, f"{name}{extension}")
-        counter = 1
-        while os.path.exists(candidate):
-            candidate = os.path.join(IMG_DIR, f"{name}_{counter}{extension}")
-            counter += 1
-        return candidate
-
 
 def main() -> int:
     app = QApplication.instance()
