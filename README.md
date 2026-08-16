@@ -26,7 +26,7 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
 
 # Installation
 
-wikiSpyder 0.3.1, Codename Michelle, targets **Python 3.12**.
+wikiSpyder 0.9.2, Codename Michelle, targets **Python 3.12**.
 
 Clone the repository and create a virtual environment:
 
@@ -88,4 +88,3 @@ If you would like to see additional features added or have a suggestion, you can
 
 
 ...
-

@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from urllib.parse import urljoin
 
 APP_NAME = "wikiSpyder"
-APP_VERSION = "0.3.1"
+APP_VERSION = "0.9.2"
 APP_CODENAME = "Michelle"
 APP_DISPLAY_NAME = f"{APP_NAME} {APP_VERSION} - Codename {APP_CODENAME}"
 

@@ -72,6 +72,6 @@ class Ui_Dialog(object):
         self.lineEdit_2.setPlaceholderText(_translate("Dialog", "TYPE or DROP your search terms here; use csv or txt file if it\'s a long list."))
         self.label.setText(_translate("Dialog", "Subject"))
         self.label_2.setText(_translate("Dialog", "Search Terms"))
-        self.label_3.setText(_translate("Dialog", "wikiSpyder 0.3.1 - Codename Michelle"))
+        self.label_3.setText(_translate("Dialog", "wikiSpyder 0.9.2 - Codename Michelle"))
         self.label_4.setText(_translate("Dialog", "TextLabel"))
         self.label_5.setText(_translate("Dialog", "TextLabel"))

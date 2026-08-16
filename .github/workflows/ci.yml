@@ -31,4 +31,4 @@ jobs:
         run: python -m py_compile __main__.py main.py newwindow.py setup.py
 
       - name: Import smoke test
-        run: python -c "import main, newwindow"
+        run: python -c "import main, newwindow; import pytestqt"

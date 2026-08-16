@@ -103,6 +103,9 @@ jobs:
           raise SystemExit(app.exec())
           PY
 
+      - name: Import pytest-qt plugin
+        run: python -c "import pytestqt"
+
       - name: Smoke test Tally CSV and progress state
         env:
           QT_QPA_PLATFORM: offscreen
