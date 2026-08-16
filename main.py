@@ -118,6 +118,10 @@ class MainWindow(QDialog):
         self.refresh_button.setGeometry(0, self._bottom_button_y, 140, 61)
         self.refresh_button.setVisible(True)
         self.refresh_button.setEnabled(True)
+        self.refresh_button.setToolTip("Reload wikiSpyder from the current codebase.")
+        self.refresh_button.setIcon(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload)
+        )
         self.refresh_button.setStyleSheet(
             "QPushButton { background-color: #0078d4; border: none; border-radius: 8px; color: #ffffff; font-weight: bold; font-size: 12px; padding: 8px 12px; }"
             "QPushButton:hover { background-color: #106ebe; }"
@@ -165,7 +169,7 @@ class MainWindow(QDialog):
         self.ui.pushButton.clicked.connect(self.spyder_1st_run)
         self.ui.pushButton_2.clicked.connect(self.deep_probe_view)
         self.ui.pushButton_3.clicked.connect(self.view_images)
-        self.refresh_button.clicked.connect(self.refresh_current_view)
+        self.refresh_button.clicked.connect(self.refresh_codebase)
         self.stop_button.clicked.connect(self.stop_current_operation)
 
     def _set_operation_active(self, active: bool) -> None:
@@ -393,42 +397,14 @@ class MainWindow(QDialog):
                         global_state.term_totals.get(term, 0) + count
                     )
 
-    def refresh_current_view(self) -> None:
+    def refresh_codebase(self) -> None:
         if self._operation_active:
             return
 
-        subject_url = normalize_subject_url(self.ui.subject_url.text())
-        search_terms = [
-            term
-            for term in re.split(r"[\s,]+", self.ui.lineEdit_2.text().strip())
-            if term
-        ]
-
-        if not subject_url:
-            self.ui.label_4.setText("Please fill in the form...")
-            return
-
-        same_query = (
-            global_state.tally_wikipedia_url == subject_url
-            and global_state.tally_search_terms == search_terms
-        )
-        global_state.wikipedia_url = subject_url
-        global_state.search_terms = search_terms
-
-        self._clear_runtime_state(reset_tally=not same_query)
-        self._set_tally_query(subject_url, search_terms)
-        if same_query:
-            self._load_tally_file()
-        self._record_tally_event("Refresh")
         self.cleanup_images()
-        self._start_worker(
-            lambda: self._run_reference_and_image_operation(
-                subject_url,
-                search_terms,
-                cancelled_links_text="Operation cancelled.",
-            ),
-            "Refreshing images...",
-        )
+        self.ui.label_5.setText("Reloading wikiSpyder from the current codebase...")
+        QApplication.processEvents()
+        os.execv(sys.executable, [sys.executable, *sys.argv])
 
     def stop_current_operation(self) -> None:
         self.kill_current_operation()
