@@ -1,8 +1,6 @@
 {
-<<<<<<< HEAD
+    "_wikiSpyderCodename": "Michelle",
     "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
-=======
->>>>>>> e09ef4db29daa811a903fda0bd0ea17af7c8b610
     "python-envs.pythonProjects": [
         {
             "path": ".",
@@ -10,8 +8,4 @@
             "packageManager": "ms-python.python:pip"
         }
     ]
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> e09ef4db29daa811a903fda0bd0ea17af7c8b610

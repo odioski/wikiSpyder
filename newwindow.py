@@ -1,4 +1,5 @@
 # Form implementation generated from reading ui file 'main-view.ui'
+# Codename: Michelle
 #
 # Created by: PyQt6 UI code generator 6.10.2
 #

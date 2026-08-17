@@ -1,3 +1,5 @@
+# Codename: Michelle
+
 indeterminate
   Progress bar mode that shows activity without a percent. Example: the first progress bar used an indeterminate busy state while Launch, Refresh, Deep Probe, or View Images was running.
 

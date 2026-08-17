@@ -1,5 +1,7 @@
 # wikiSpyder Terminology
 
+<!-- Codename: Michelle -->
+
 A compact glossary of terms that came up while refining wikiSpyder's Tally, Stop, Refresh, layout, and progress behavior.
 
 ## Runtime And Control Flow

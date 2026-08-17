@@ -1,5 +1,7 @@
 # wikiSpyder Agent Instructions
 
+> **Codename: Michelle**
+
 wikiSpyder is a **Python 3.12 + PyQt6 desktop application** for scraping a Wikipedia page's references, filtering links by search terms, and probing the resulting pages for images.
 
 ## Project shape

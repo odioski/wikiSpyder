@@ -1,3 +1,4 @@
+/* Codename: Michelle */
 /* Main Window Styling */
 QMainWindow {
     background-color: #2d2d2d;

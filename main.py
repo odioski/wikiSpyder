@@ -1,4 +1,4 @@
-
+# Codename: Michelle
 import asyncio
 import csv
 import html
@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from app_state import (
+    APP_CODENAME,
     APP_DISPLAY_NAME,
     IMG_DIR,
     TALLY_FILE,
@@ -371,6 +372,7 @@ class MainWindow(QDialog):
             with open(TALLY_FILE, "w", encoding="utf-8", newline="") as file:
                 writer = csv.writer(file)
                 writer.writerow(["kind", "url", "term", "count"])
+                writer.writerow(["metadata", "", f"Codename: {APP_CODENAME}", ""])
                 for event in events:
                     writer.writerow(["event", "", event, ""])
                 for url, counts in link_term_counts.items():
