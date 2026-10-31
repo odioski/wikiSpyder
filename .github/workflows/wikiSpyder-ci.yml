@@ -39,7 +39,7 @@ jobs:
       - name: Install pinned Python dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-dev.txt
 
       - name: Upgrade Pillow and aiohttp for dependency drift check
         if: matrix.dependency-mode == 'latest-pillow-aiohttp'
@@ -121,9 +121,8 @@ jobs:
           fd, path = tempfile.mkstemp(suffix=".csv")
           os.close(fd)
           os.remove(path)
-          main.TALLY_FILE = path
-
           window = main.MainWindow()
+          window._session_store = main.TallyStore(path)
           main.global_state.search_terms = ["alpha", "beta"]
           window._set_tally_query("url1", ["alpha", "beta"])
           window._record_tally_event("Launch")
@@ -138,5 +137,6 @@ jobs:
           window._set_operation_active(False)
           assert not window._progress_timer.isActive()
 
+          window.close()
           os.remove(path)
           PY

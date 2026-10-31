@@ -1,0 +1,87 @@
+name: Build and publish release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows-x64
+          - os: ubuntu-22.04
+            platform: linux-x64
+          - os: macos-15
+            platform: macos-arm64
+          - os: macos-15-intel
+            platform: macos-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install packaging dependencies
+        run: python -m pip install -r requirements-build.txt
+      - name: Build bundled app
+        run: python packaging/build_app.py
+      - name: Build Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $version = "$env:GITHUB_REF_NAME" -replace '^v', ''
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" packaging\windows\wikiSpyder.iss
+      - name: Build macOS disk image
+        if: runner.os == 'macOS'
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p dist/dmg
+          cp -R dist/wikiSpyder.app dist/dmg/
+          ln -s /Applications dist/dmg/Applications
+          hdiutil create -volname wikiSpyder -srcfolder dist/dmg -ov -format UDZO "dist/wikiSpyder-${VERSION}-${{ matrix.platform }}.dmg"
+      - name: Build Linux AppImage
+        if: runner.os == 'Linux'
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
+          cp -R dist/wikiSpyder/. AppDir/usr/bin/
+          cp packaging/linux/wikiSpyder.desktop AppDir/wikiSpyder.desktop
+          cp packaging/linux/wikiSpyder.desktop AppDir/usr/share/applications/wikiSpyder.desktop
+          python -c "from PIL import Image; Image.open('assets/wikiSpyder.ico').convert('RGBA').save('AppDir/wikiSpyder.png'); Image.open('assets/wikiSpyder.ico').convert('RGBA').save('AppDir/usr/share/icons/hicolor/256x256/apps/wikiSpyder.png')"
+          cp AppDir/wikiSpyder.png AppDir/.DirIcon
+          printf '%s\n' '#!/bin/sh' 'HERE="$(dirname "$(readlink -f "$0")")"' 'exec "$HERE/usr/bin/wikiSpyder" "$@"' > AppDir/AppRun
+          chmod +x AppDir/AppRun
+          curl -L "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage" -o appimagetool.AppImage
+          chmod +x appimagetool.AppImage
+          ./appimagetool.AppImage --appimage-extract-and-run AppDir "dist/wikiSpyder-${VERSION}-linux-x64.AppImage"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
+            dist/*.AppImage
+          if-no-files-found: error
+          retention-days: 3
+
+  publish:
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" release-assets/* --generate-notes

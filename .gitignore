@@ -1,15 +1,17 @@
-# Codename: Michelle
+# Python and package build output
 __pycache__/
 *.py[cod]
-venv/
-.venv/
-saved_images/
-*.bak
-pyvenv.cfg
+*.pyo
+*.egg-info/
 build/
 dist/
-*.egg-info/
+venv/
+.venv/
+env/
+
+# Local application data and temporary downloads
 tally.csv
+saved_images/
 
 # Test and tooling caches
 .pytest_cache/
@@ -18,19 +20,20 @@ tally.csv
 .coverage
 htmlcov/
 
-# OS/editor-generated files
+# Packaging output
+AppDir/
+*.AppImage
+*.dmg
+*.exe
+
+# OS and editor files
 .DS_Store
 Thumbs.db
 *.swp
 *.swo
+.vscode/
 
-# Shell history files
-.bash_history
-
-# Local developer artifacts
+# Codex task metadata
 .agents/
 .codex/
-artifacts/
-boot/
-dev/
-node_modules/
+.aws/
