@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.0 - Codename Michelle
+
+- Added one-click Windows, Linux, and macOS release packaging through tagged GitHub releases.
+- Moved session archives and temporary images into per-user application data and cache locations, migrating an existing checkout `tally.csv` on first launch.
+- Removed the GUI test plugin from normal app dependencies and added separate development and packaging dependency lists.
+- Recreated `.gitignore` rules for local sessions, temporary images, build outputs, Python caches, and editor artifacts.
+
 ## 2026-10-31 — Codex session
 
 - Refreshed the desktop UI with a dark slate theme, clearer input and result sections, and responsive layouts.

@@ -20,7 +20,7 @@ wikiSpyder is a **Python 3.12 + PyQt6 desktop application** for scraping a Wikip
   - image discovery and download,
   - image viewer/save flows.
 - Shared runtime data currently lives in the `GlobalState` dataclass instance. If you add new cross-feature state, extend `GlobalState` intentionally rather than introducing more module-level globals.
-- The app writes temporary downloaded images under `saved_images/` relative to the repository. Keep cleanup behavior aligned with `cleanup_images()` and `closeEvent()`.
+- The app writes session data and temporary downloaded images under per-user application data/cache folders. Keep cleanup behavior aligned with `cleanup_images()` and `closeEvent()`; `tally.csv` in a source checkout is migrated on first launch.
 - User-visible results are rendered in `label_4` and `label_5` using HTML strings. Preserve clickable-link behavior in formatted output.
 - Networking currently uses:
   - `requests` for the initial Wikipedia/reference fetch

@@ -32,11 +32,11 @@ from PyQt6.QtWidgets import (
     QDoubleSpinBox,
 )
 
+from wiki_spyder import app_state
 from wiki_spyder.app_state import (
+    APP_NAME,
     APP_DISPLAY_NAME,
-    IMG_DIR,
     ICON_FILE,
-    TALLY_FILE,
     USER_AGENT,
     global_state,
     normalize_subject_url,
@@ -63,6 +63,7 @@ from wiki_spyder.worker import OperationWorker
 class MainWindow(MainWindowLayoutMixin, QDialog):
     def __init__(self) -> None:
         super().__init__()
+        app_state.configure_user_paths()
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
         self._initialize_layout_state()
@@ -82,7 +83,7 @@ class MainWindow(MainWindowLayoutMixin, QDialog):
         self._progress_timer.setInterval(18)
         self._progress_timer.timeout.connect(self._animate_progress_bar)
         self._network_executor = ThreadPoolExecutor(max_workers=12)
-        self._session_store = TallyStore(TALLY_FILE)
+        self._session_store = TallyStore(app_state.TALLY_FILE)
         self._settings = QSettings("Omar Daniels", "wikiSpyder")
         self._restore_latest_on_start = self._settings.value(
             "restore_latest_session", True, type=bool
@@ -402,7 +403,7 @@ class MainWindow(MainWindowLayoutMixin, QDialog):
         global_state.tally_wikipedia_url = global_state.wikipedia_url
         global_state.tally_search_terms = list(global_state.search_terms)
         if self._save_tally_file():
-            QMessageBox.information(self, "Session Saved", "Saved to tally.csv.")
+            QMessageBox.information(self, "Session Saved", "Saved to the session archive.")
         else:
             QMessageBox.warning(self, "Save Failed", "The session could not be saved.")
 
@@ -420,7 +421,7 @@ class MainWindow(MainWindowLayoutMixin, QDialog):
         )
         if not file_path:
             return
-        if os.path.abspath(file_path) == os.path.abspath(TALLY_FILE):
+        if os.path.abspath(file_path) == os.path.abspath(app_state.TALLY_FILE):
             QMessageBox.warning(
                 self,
                 "Choose Another File",
@@ -816,7 +817,7 @@ class MainWindow(MainWindowLayoutMixin, QDialog):
                 global_state.link_term_counts, global_state.matched_links
             ),
             search_term_hits=search_term_hits_count(global_state.term_totals),
-            tally_filename=os.path.basename(TALLY_FILE),
+            tally_filename=os.path.basename(app_state.TALLY_FILE),
             tally_events=format_tally_events(global_state.tally_events),
             term_totals=format_term_totals(
                 global_state.search_terms, global_state.term_totals
@@ -844,8 +845,8 @@ class MainWindow(MainWindowLayoutMixin, QDialog):
 
     def cleanup_images(self) -> None:
         global_state.images.clear()
-        for filename in os.listdir(IMG_DIR):
-            file_path = os.path.join(IMG_DIR, filename)
+        for filename in os.listdir(app_state.IMG_DIR):
+            file_path = os.path.join(app_state.IMG_DIR, filename)
             if os.path.isfile(file_path):
                 try:
                     os.remove(file_path)
@@ -873,6 +874,8 @@ def main() -> int:
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
+    app.setApplicationName(APP_NAME)
+    app.setOrganizationName("Omar Daniels")
     if os.path.isfile(ICON_FILE):
         app.setWindowIcon(QIcon(ICON_FILE))
 

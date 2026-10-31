@@ -27,12 +27,26 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
 
 - wikiSpyder can save all images automatically, if Save Images is checked.
 
-- Search sessions, reference links, term counts, action history, and the displayed output are saved in `tally.csv` and restored when the app next opens. Temporary downloaded image files are purged when the program exits.
+- Search sessions, reference links, term counts, action history, and the displayed output are saved in the per-user session archive and restored when the app next opens. Temporary downloaded image files are purged when the program exits.
 - Use the **Sessions** menu to reopen saved research, and **File → Export Current Session** to write one session to its own CSV file. **Options → Restore Latest Session on Startup** controls automatic restoration.
 
 # Installation
 
 wikiSpyder 1.0.0, Codename Michelle, targets **Python 3.12**.
+
+## Install a release (recommended)
+
+Download the installer for your operating system from [GitHub Releases](https://github.com/odioski/wikiSpyder/releases):
+
+- **Windows:** run `wikiSpyder-*-windows-x64-setup.exe`.
+- **macOS:** open the matching `.dmg` and drag wikiSpyder to Applications. The current images are unsigned; macOS may require opening the app through **System Settings → Privacy & Security** the first time.
+- **Linux:** make the `.AppImage` executable, then open it. For example: `chmod +x wikiSpyder-*.AppImage`.
+
+Release files bundle Python and the required libraries, so end users do not need to install Python. New releases are built for Windows x64, Linux x64, macOS Intel, and macOS Apple Silicon.
+
+Session history is kept in the operating system's per-user application data folder. Temporary images are kept in its cache folder and removed when the app closes. Existing `tally.csv` data in a source checkout is copied into the new user data location on first launch.
+
+## Install from source
 
 Clone the repository and create a virtual environment:
 
@@ -45,7 +59,7 @@ python -m pip install --upgrade pip setuptools wheel
 python -m pip install .
 ```
 
-This installs the package and the dependencies declared in `setup.py`. Launch it with:
+This installs the package and runtime dependencies declared in `setup.py`. Launch it with:
 
 ```bash
 wikiSpyder
@@ -63,6 +77,17 @@ If using Visual Studio Code, open the workspace file:
 ```bash
 code wikiSpyder.code-workspace
 ```
+
+## Build a release locally
+
+On the operating system you want to package, install the build dependencies and create the bundled app:
+
+```bash
+python -m pip install -r requirements-build.txt
+python packaging/build_app.py
+```
+
+The `dist/` folder contains the platform bundle. The tagged GitHub Actions release workflow wraps it in the Windows installer, Linux AppImage, or macOS disk image and attaches those files to the release.
 
 ## Local release checks
 

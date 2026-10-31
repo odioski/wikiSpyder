@@ -18,11 +18,14 @@ setup(
         # 13.0.0 addresses the PSD bounds issue and multi-frame memory-safety advisory.
         "Pillow==13.0.0",
         "PyQt6==6.10.2",
-        "pytest-qt==4.5.0",
         "requests==2.33.0",
     ],
+    extras_require={
+        "dev": ["pytest-qt==4.5.0"],
+        "build": ["pyinstaller==6.22.3"],
+    },
     entry_points={
-        "console_scripts": [
+        "gui_scripts": [
             "wikiSpyder=main:main",
         ],
     },

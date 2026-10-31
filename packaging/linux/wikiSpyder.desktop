@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=wikiSpyder
+Comment=Probe Wikipedia references and discover images
+Exec=AppRun
+Icon=wikiSpyder
+Terminal=false
+Type=Application
+Categories=Education;Network;

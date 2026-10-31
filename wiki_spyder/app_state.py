@@ -1,9 +1,13 @@
 # Codename: Michelle
 import os
 import re
+import shutil
 import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 from urllib.parse import urljoin
+
+from PyQt6.QtCore import QCoreApplication, QStandardPaths
 
 APP_NAME = "wikiSpyder"
 APP_VERSION = "1.0.0"
@@ -12,15 +16,21 @@ APP_DISPLAY_NAME = f"{APP_NAME} {APP_VERSION} - Codename {APP_CODENAME}"
 APP_VERSION_LABEL = APP_DISPLAY_NAME
 
 PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR = os.path.dirname(PACKAGE_DIR)
-IMG_DIR = os.path.join(BASE_DIR, "saved_images")
-TALLY_FILE = os.path.join(BASE_DIR, "tally.csv")
+if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+    BASE_DIR = sys._MEIPASS
+else:
+    BASE_DIR = os.path.dirname(PACKAGE_DIR)
+
 ICON_FILE = os.path.join(BASE_DIR, "assets", "wikiSpyder.ico")
+QSS_FILE = os.path.join(BASE_DIR, "wikiSpyder.qss")
 if not os.path.isfile(ICON_FILE):
     ICON_FILE = os.path.join(sys.prefix, "share", "wikiSpyder", "wikiSpyder.ico")
-QSS_FILE = os.path.join(BASE_DIR, "wikiSpyder.qss")
 if not os.path.isfile(QSS_FILE):
     QSS_FILE = os.path.join(sys.prefix, "share", "wikiSpyder", "wikiSpyder.qss")
+
+USER_DATA_DIR = ""
+IMG_DIR = ""
+TALLY_FILE = ""
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -28,7 +38,38 @@ USER_AGENT = (
 )
 IMAGE_PATTERN = re.compile(r"\.(?:jpg|jpeg|png|gif|webp)(?:$|[?#])", re.IGNORECASE)
 
-os.makedirs(IMG_DIR, exist_ok=True)
+def configure_user_paths() -> None:
+    """Choose writable per-user locations for sessions and temporary images."""
+    global USER_DATA_DIR, IMG_DIR, TALLY_FILE
+
+    QCoreApplication.setOrganizationName("Omar Daniels")
+    QCoreApplication.setApplicationName(APP_NAME)
+    data_root = QStandardPaths.writableLocation(
+        QStandardPaths.StandardLocation.AppDataLocation
+    )
+    cache_root = QStandardPaths.writableLocation(
+        QStandardPaths.StandardLocation.CacheLocation
+    )
+    if not data_root:
+        data_root = str(Path.home() / ".local" / "share" / APP_NAME)
+    if not cache_root:
+        cache_root = str(Path.home() / ".cache" / APP_NAME)
+
+    USER_DATA_DIR = data_root
+    IMG_DIR = os.path.join(cache_root, "saved_images")
+    TALLY_FILE = os.path.join(USER_DATA_DIR, "tally.csv")
+    os.makedirs(USER_DATA_DIR, exist_ok=True)
+    os.makedirs(IMG_DIR, exist_ok=True)
+
+    # Preserve an existing checkout session archive on the first run after
+    # switching storage to the per-user application data directory.
+    legacy_tally = os.path.join(BASE_DIR, "tally.csv")
+    if (
+        not getattr(sys, "frozen", False)
+        and os.path.isfile(legacy_tally)
+        and not os.path.exists(TALLY_FILE)
+    ):
+        shutil.copy2(legacy_tally, TALLY_FILE)
 
 
 @dataclass
