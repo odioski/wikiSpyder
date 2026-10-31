@@ -15,7 +15,8 @@ setup(
     install_requires=[
         "aiohttp==3.13.3",
         "beautifulsoup4==4.14.3",
-        "Pillow==12.1.1",
+        # 13.0.0 addresses the PSD bounds issue and multi-frame memory-safety advisory.
+        "Pillow==13.0.0",
         "PyQt6==6.10.2",
         "pytest-qt==4.5.0",
         "requests==2.33.0",

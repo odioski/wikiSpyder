@@ -6,6 +6,23 @@ venv/
 saved_images/
 *.bak
 pyvenv.cfg
+build/
+dist/
+*.egg-info/
+tally.csv
+
+# Test and tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# OS/editor-generated files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
 
 # Shell history files
 .bash_history

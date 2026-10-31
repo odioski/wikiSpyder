@@ -42,20 +42,20 @@ cd wikiSpyder
 python3.12 -m venv venv
 source venv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
-python -m pip install -r requirements.txt
-```
-
-Run directly from the checkout:
-
-```bash
-python main.py
-```
-
-Optional: install the local package and launch it through the console entry point:
-
-```bash
 python -m pip install .
+```
+
+This installs the package and the dependencies declared in `setup.py`. Launch it with:
+
+```bash
 wikiSpyder
+```
+
+To run from the checkout without installing the package, install the pinned requirements and start `main.py`:
+
+```bash
+python -m pip install -r requirements.txt
+python main.py
 ```
 
 If using Visual Studio Code, open the workspace file:
