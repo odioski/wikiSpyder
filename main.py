@@ -4,47 +4,68 @@ import csv
 import html
 import os
 import re
-import shutil
 import sys
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
+from datetime import datetime, timezone
 from threading import Event, RLock
-from typing import Callable
+from typing import Any, Callable
+from uuid import uuid4
 
 import requests
-from PyQt6.QtCore import QSize, Qt, QTimer
-from PyQt6.QtGui import QColor, QCloseEvent, QFont, QIcon, QPainter, QPixmap, QResizeEvent
+from PyQt6.QtCore import QSettings, Qt, QTimer
+from PyQt6.QtGui import (
+    QAction,
+    QCloseEvent,
+    QIcon,
+    QKeySequence,
+)
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
+    QDialogButtonBox,
     QFileDialog,
+    QFormLayout,
+    QLabel,
     QMessageBox,
-    QProgressBar,
-    QPushButton,
-    QScrollArea,
-    QStyle,
+    QMenu,
+    QSpinBox,
+    QDoubleSpinBox,
 )
 
-from app_state import (
-    APP_CODENAME,
+from wiki_spyder.app_state import (
     APP_DISPLAY_NAME,
     IMG_DIR,
+    ICON_FILE,
     TALLY_FILE,
     USER_AGENT,
     global_state,
     normalize_subject_url,
 )
-from image_probe import ImageProbe
-from image_viewer import launch_image_viewer
-from newwindow import Ui_Dialog
-from scraping import deep_probe_links, scrape_wikipedia_references
-from worker import OperationWorker
+from wiki_spyder.image_probe import ImageProbe
+from wiki_spyder.newwindow import Ui_Dialog
+from wiki_spyder.scraping import deep_probe_links, scrape_wikipedia_references
+from wiki_spyder.results_view import (
+    count_search_terms,
+    format_download_output,
+    format_link_term_counts,
+    format_links,
+    format_tally,
+    format_tally_events,
+    format_term_totals,
+    matched_links_count,
+    search_term_hits_count,
+)
+from wiki_spyder.session_store import TallyStore
+from wiki_spyder.window_layout import MainWindowLayoutMixin
+from wiki_spyder.worker import OperationWorker
 
 
-class MainWindow(QDialog):
+class MainWindow(MainWindowLayoutMixin, QDialog):
     def __init__(self) -> None:
         super().__init__()
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
+        self._initialize_layout_state()
         self._stop_requested = False
         self._stop_event = Event()
         self._state_lock = RLock()
@@ -53,143 +74,95 @@ class MainWindow(QDialog):
         self._async_loop: asyncio.AbstractEventLoop | None = None
         self._worker: OperationWorker | None = None
         self._download_output: list[str] = []
+        self._links_output = ""
+        self._tally_output = ""
         self._progress_value = 0
         self._progress_direction = 1
         self._progress_timer = QTimer(self)
         self._progress_timer.setInterval(18)
         self._progress_timer.timeout.connect(self._animate_progress_bar)
         self._network_executor = ThreadPoolExecutor(max_workers=12)
-        self.stop_button = None
-        self.progress_bar = None
-        self.links_scroll_area = None
-        self._results_top = 210
-        self._results_height = 211
-        self._results_left_margin = 90
-        self._results_right_margin = 34
-        self._results_gap = 29
-        self._links_width_ratio = 421 / (421 + 341)
-        self._bottom_button_y = 440
-        self._bottom_button_width = 140
-        self._bottom_button_height = 61
-        self._bottom_button_gap = 30
-        self._progress_width = 320
-        self._progress_height = 16
-        self._progress_y = 520
+        self._session_store = TallyStore(TALLY_FILE)
+        self._settings = QSettings("Omar Daniels", "wikiSpyder")
+        self._restore_latest_on_start = self._settings.value(
+            "restore_latest_session", True, type=bool
+        )
+        self._deep_probe_page_limit = self._settings.value(
+            "deep_probe_page_limit", 100, type=int
+        )
+        self._deep_probe_request_delay = self._settings.value(
+            "deep_probe_request_delay", 1.0, type=float
+        )
+        self._session_id = uuid4().hex
+        self._session_started_at = datetime.now(timezone.utc).isoformat(
+            timespec="microseconds"
+        )
         self._configure_ui()
+        self._build_menu_bar()
+        self._load_tally_file()
         self._connect_signals()
 
-    def _configure_ui(self) -> None:
-        self.setWindowTitle(APP_DISPLAY_NAME)
-        self.ui.label_3.setText(APP_DISPLAY_NAME)
-
-        self.ui.buttonBox.hide()
-        self.ui.verticalScrollBar.hide()
-        self.ui.verticalScrollBar_3.hide()
-
-        self.links_scroll_area = QScrollArea(self)
-        self.links_scroll_area.setObjectName("links_scroll_area")
-        self.links_scroll_area.setGeometry(self.ui.label_4.geometry())
-        self.links_scroll_area.setWidget(self.ui.label_4)
-        self.links_scroll_area.setWidgetResizable(True)
-        self.links_scroll_area.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+    def _build_menu_bar(self) -> None:
+        self.menu_bar = self.ui.menuBar
+        self.menu_bar.setNativeMenuBar(False)
+        self.file_menu = self.menu_bar.addMenu("&File")
+        self._add_menu_action(
+            self.file_menu, "New Session", self.start_new_session, "Ctrl+N"
         )
-        self.links_scroll_area.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        self._add_menu_action(
+            self.file_menu, "Save Session Now", self.save_session_now, "Ctrl+S"
         )
-        self.links_scroll_area.setStyleSheet(
-            "QScrollArea { background-color: #2d2d2d; border: 1px solid #555555; border-radius: 5px; }"
-            "QScrollBar:vertical { background-color: #3a3a3a; width: 12px; border-radius: 6px; }"
-            "QScrollBar::handle:vertical { background-color: #666666; border-radius: 6px; min-height: 20px; }"
-            "QScrollBar::handle:vertical:hover { background-color: #777777; }"
+        self._add_menu_action(
+            self.file_menu, "Export Current Session…", self.export_current_session
         )
+        self.file_menu.addSeparator()
+        self._add_menu_action(self.file_menu, "Exit", self.close, "Ctrl+Q")
 
-        self.stop_button = QPushButton("Stop", self)
-        self.stop_button.setGeometry(480, 440, 150, 61)
-        self.stop_button.setVisible(True)
-        self.stop_button.setEnabled(False)
-        self.stop_button.setStyleSheet(
-            "QPushButton { background-color: #0078d4; border: none; border-radius: 8px; color: #ffffff; font-weight: bold; font-size: 14px; padding: 12px 24px; }"
-            "QPushButton:hover { background-color: #106ebe; }"
-            "QPushButton:pressed { background-color: #005a9e; }"
-            "QPushButton:disabled { background-color: #555555; color: #999999; }"
+        self.sessions_menu = self.menu_bar.addMenu("&Sessions")
+        self._add_menu_action(
+            self.sessions_menu, "Open Latest Session", self.open_latest_session
         )
+        self.open_session_menu = self.sessions_menu.addMenu("Open Saved Session")
+        self.open_session_menu.aboutToShow.connect(self._populate_saved_sessions_menu)
 
-        self.refresh_button = QPushButton("Refresh", self)
-        self.refresh_button.setGeometry(0, self._bottom_button_y, 140, 61)
-        self.refresh_button.setVisible(True)
-        self.refresh_button.setEnabled(True)
-        self.refresh_button.setToolTip("Reload wikiSpyder from the current codebase.")
-        self.refresh_button.setIcon(
-            self.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload)
+        self.options_menu = self.menu_bar.addMenu("&Options")
+        self._add_menu_action(
+            self.options_menu,
+            "Deep Probe Settings…",
+            self._show_deep_probe_settings,
         )
-        self.refresh_button.setStyleSheet(
-            "QPushButton { background-color: #0078d4; border: none; border-radius: 8px; color: #ffffff; font-weight: bold; font-size: 12px; padding: 8px 12px; }"
-            "QPushButton:hover { background-color: #106ebe; }"
-            "QPushButton:pressed { background-color: #005a9e; }"
-            "QPushButton:disabled { background-color: #555555; color: #999999; }"
+        self.options_menu.addSeparator()
+        self.restore_session_action = QAction(
+            "Restore Latest Session on Startup", self
         )
+        self.restore_session_action.setCheckable(True)
+        self.restore_session_action.setChecked(self._restore_latest_on_start)
+        self.restore_session_action.toggled.connect(self._set_restore_latest_on_start)
+        self.options_menu.addAction(self.restore_session_action)
 
-        self.progress_bar = QProgressBar(self)
-        self.progress_bar.setRange(0, 100)
-        self.progress_bar.setValue(self._progress_value)
-        self.progress_bar.setTextVisible(False)
-        self.progress_bar.setVisible(False)
-        self.progress_bar.setStyleSheet(
-            "QProgressBar { background-color: #1a1a1a; border: 1px solid #555555; border-radius: 5px; }"
-            "QProgressBar::chunk { background-color: #0078d4; border-radius: 4px; }"
-        )
+        help_menu = self.menu_bar.addMenu("&Help")
+        self._add_menu_action(help_menu, "About wikiSpyder", self.show_about)
+        self.menu_bar.setGeometry(0, 0, self.width(), 28)
 
-        self.ui.pushButton.setGeometry(70, 440, 150, 61)
-        self.ui.pushButton_2.setGeometry(270, 440, 150, 61)
-        self.ui.pushButton_2.setToolTipDuration(10000)
-        self.ui.pushButton_2.setIcon(self._information_icon())
-        self.ui.pushButton_2.setIconSize(QSize(18, 18))
-        self.ui.pushButton_3.setGeometry(680, 440, 150, 61)
-        self.ui.pushButton_3.setIcon(
-            self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView)
-        )
-
-        for label in (self.ui.label_4, self.ui.label_5):
-            label.setWordWrap(True)
-            label.setOpenExternalLinks(True)
-            label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
-            label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
-            label.setStyleSheet(
-                "background-color: #1a1a1a; border: 1px solid #555555; border-radius: 5px; padding: 8px; color: #ffffff;"
-            )
-
-        self.ui.label_4.setText("Search results will appear here.")
-        self.ui.label_5.setText("Link tally and image status will appear here.")
-        self.setMinimumSize(915, 579)
-        self._resize_result_views()
-        self._center_bottom_buttons()
-        self._center_progress_bar()
-
-    def _information_icon(self) -> QIcon:
-        pixmap = QPixmap(24, 24)
-        pixmap.fill(Qt.GlobalColor.transparent)
-
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setBrush(QColor("#0078d4"))
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawEllipse(2, 2, 20, 20)
-
-        font = QFont()
-        font.setBold(True)
-        font.setPointSize(14)
-        painter.setFont(font)
-        painter.setPen(QColor("#ffffff"))
-        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "i")
-        painter.end()
-
-        return QIcon(pixmap)
+    def _add_menu_action(
+        self,
+        menu: QMenu,
+        text: str,
+        callback: Callable[..., Any],
+        shortcut: str | None = None,
+    ) -> QAction:
+        action = QAction(text, self)
+        if shortcut:
+            action.setShortcut(QKeySequence(shortcut))
+        action.triggered.connect(callback)
+        menu.addAction(action)
+        return action
 
     def _connect_signals(self) -> None:
         self.ui.subject_url.textChanged.connect(self.disco_subject)
         self.ui.subject_url.returnPressed.connect(self.spyder_1st_run)
         self.ui.lineEdit_2.textChanged.connect(self.disco_terms)
+        self.ui.lineEdit_2.returnPressed.connect(self.spyder_1st_run)
         self.ui.pushButton.clicked.connect(self.spyder_1st_run)
         self.ui.pushButton_2.clicked.connect(self.deep_probe_view)
         self.ui.pushButton_3.clicked.connect(self.view_images)
@@ -217,13 +190,13 @@ class MainWindow(QDialog):
         self._stop_requested = False
         self._stop_event.clear()
         self._set_operation_active(True)
-        self.ui.label_5.setText(status)
+        self._set_tally_output(html.escape(status))
 
         worker = OperationWorker(operation, self)
         self._worker = worker
-        worker.links_changed.connect(self.ui.label_4.setText)
-        worker.tally_changed.connect(self.ui.label_5.setText)
-        worker.output_changed.connect(self.ui.label_5.setText)
+        worker.links_changed.connect(self._set_links_output)
+        worker.tally_changed.connect(self._set_tally_output)
+        worker.output_changed.connect(self._set_tally_output)
         worker.failed.connect(self._worker_failed)
         worker.operation_finished.connect(self._worker_finished)
         worker.operation_finished.connect(worker.deleteLater)
@@ -231,110 +204,27 @@ class MainWindow(QDialog):
         worker.start()
 
     def _worker_failed(self, message: str) -> None:
-        self.ui.label_5.setText(f"An error occurred: {message}")
+        self._set_tally_output(f"An error occurred: {html.escape(message)}")
         self._worker = None
         self._set_operation_active(False)
+        self._save_tally_file()
 
     def _worker_finished(self, stopped: bool, show_viewer: bool) -> None:
         self._worker = None
         self._set_operation_active(False)
+        self._save_tally_file()
         if show_viewer and not stopped:
-            launch_image_viewer(self, global_state.images)
+            self.show_image_gallery(global_state.images)
 
-    def resizeEvent(self, event: QResizeEvent) -> None:
-        super().resizeEvent(event)
-        self._resize_result_views()
-        self._center_bottom_buttons()
-        self._center_progress_bar()
+    def _set_links_output(self, content: str) -> None:
+        self._links_output = content
+        self.ui.label_4.setText(content)
+        self._save_tally_file()
 
-    def _resize_result_views(self) -> None:
-        if getattr(self, "links_scroll_area", None) is None:
-            return
-
-        available_width = (
-            self.width()
-            - self._results_left_margin
-            - self._results_right_margin
-            - self._results_gap
-        )
-        left_width = max(260, int(available_width * self._links_width_ratio))
-        right_width = max(240, available_width - left_width)
-        if left_width + right_width > available_width:
-            overflow = left_width + right_width - available_width
-            left_width = max(260, left_width - overflow)
-
-        right_x = self._results_left_margin + left_width + self._results_gap
-        self.links_scroll_area.setGeometry(
-            self._results_left_margin,
-            self._results_top,
-            left_width,
-            self._results_height,
-        )
-        self.ui.label_5.setGeometry(
-            right_x,
-            self._results_top,
-            right_width,
-            self._results_height,
-        )
-
-    def _center_bottom_buttons(self) -> None:
-        if getattr(self, "stop_button", None) is None:
-            return
-
-        buttons = [
-            self.ui.pushButton,
-            self.ui.pushButton_2,
-            self.stop_button,
-            self.refresh_button,
-            self.ui.pushButton_3,
-        ]
-        total_width = (
-            len(buttons) * self._bottom_button_width
-            + (len(buttons) - 1) * self._bottom_button_gap
-        )
-        x = max(0, (self.width() - total_width) // 2)
-        for button in buttons:
-            button.setGeometry(
-                x,
-                self._bottom_button_y,
-                self._bottom_button_width,
-                self._bottom_button_height,
-            )
-            x += self._bottom_button_width + self._bottom_button_gap
-
-    def _center_progress_bar(self) -> None:
-        if getattr(self, "progress_bar", None) is None:
-            return
-
-        self.progress_bar.setGeometry(
-            max(0, (self.width() - self._progress_width) // 2),
-            self._progress_y,
-            self._progress_width,
-            self._progress_height,
-        )
-
-    def _start_progress_bar(self) -> None:
-        self._progress_value = 8
-        self._progress_direction = 1
-        self.progress_bar.setValue(self._progress_value)
-        if not self._progress_timer.isActive():
-            self._progress_timer.start()
-
-    def _stop_progress_bar(self) -> None:
-        self._progress_timer.stop()
-        self._progress_value = 0
-        self._progress_direction = 1
-        self.progress_bar.setValue(self._progress_value)
-
-    def _animate_progress_bar(self) -> None:
-        self._progress_value += self._progress_direction * 2
-        if self._progress_value >= 92:
-            self._progress_value = 92
-            self._progress_direction = -1
-        elif self._progress_value <= 8:
-            self._progress_value = 8
-            self._progress_direction = 1
-        self.progress_bar.setValue(self._progress_value)
+    def _set_tally_output(self, content: str) -> None:
+        self._tally_output = content
+        self.ui.label_5.setText(content)
+        self._save_tally_file()
 
     def _clear_runtime_state(self, reset_tally: bool = True) -> None:
         global_state.found_links.clear()
@@ -354,64 +244,259 @@ class MainWindow(QDialog):
     def _set_tally_query(self, url: str, search_terms: list[str]) -> None:
         global_state.tally_wikipedia_url = url
         global_state.tally_search_terms = list(search_terms)
+        self._save_tally_file()
 
     def _record_tally_event(self, event: str) -> None:
         with self._state_lock:
             global_state.tally_events.append(event)
             self._save_tally_file()
 
-    def _save_tally_file(self) -> None:
+    def _save_tally_file(self) -> bool:
         with self._state_lock:
-            events = list(global_state.tally_events)
-            link_term_counts = {
-                url: dict(counts)
-                for url, counts in global_state.link_term_counts.items()
+            snapshot = {
+                "started_at": self._session_started_at,
+                "subject": global_state.tally_wikipedia_url,
+                "search_terms": list(global_state.tally_search_terms),
+                "found_links": list(global_state.found_links),
+                "fixed_links": list(global_state.fixed_links),
+                "matched_links": list(global_state.matched_links),
+                "image_urls": list(global_state.image_urls),
+                "link_term_counts": {
+                    url: dict(counts)
+                    for url, counts in global_state.link_term_counts.items()
+                },
+                "events": list(global_state.tally_events),
+                "links_output": self._links_output,
+                "tally_output": self._tally_output,
             }
 
-        try:
-            with open(TALLY_FILE, "w", encoding="utf-8", newline="") as file:
-                writer = csv.writer(file)
-                writer.writerow(["kind", "url", "term", "count"])
-                writer.writerow(["metadata", "", f"Codename: {APP_CODENAME}", ""])
-                for event in events:
-                    writer.writerow(["event", "", event, ""])
-                for url, counts in link_term_counts.items():
-                    for term, count in counts.items():
-                        writer.writerow(["term_count", url, term, count])
-        except OSError as exc:
-            global_state.messages.append(f"Could not save tally file: {exc}")
+            try:
+                self._session_store.save(self._session_id, snapshot)
+            except (OSError, csv.Error) as exc:
+                global_state.messages.append(f"Could not save tally file: {exc}")
+                return False
+        return True
 
     def _load_tally_file(self) -> None:
-        if not os.path.isfile(TALLY_FILE):
+        if not self._restore_latest_on_start:
+            return
+        latest = self._session_store.latest()
+        if latest is None:
             return
 
-        link_term_counts: dict[str, dict[str, int]] = {}
-        tally_events: list[str] = []
-        try:
-            with open(TALLY_FILE, "r", encoding="utf-8", newline="") as file:
-                for row in csv.DictReader(file):
-                    kind = row.get("kind", "")
-                    if kind == "event":
-                        event = row.get("term", "")
-                        if event:
-                            tally_events.append(event)
-                    elif kind == "term_count":
-                        url = row.get("url", "")
-                        term = row.get("term", "")
-                        if not url or not term:
-                            continue
-                        try:
-                            count = int(row.get("count", "0") or 0)
-                        except ValueError:
-                            count = 0
-                        link_term_counts.setdefault(url, {})[term] = count
-        except OSError as exc:
-            global_state.messages.append(f"Could not load tally file: {exc}")
-            return
+        session_id, _session = latest
+        self.open_saved_session(session_id, warn_if_busy=False)
 
-        global_state.link_term_counts = link_term_counts
-        global_state.tally_events = tally_events
+    def _restore_saved_session(self, session_id: str) -> None:
+        session = self._session_store.sessions.get(session_id)
+        if session is None:
+            return
+        self._session_id = session_id
+        self.show_results()
+        self._session_started_at = session.get("started_at") or self._session_started_at
+        global_state.tally_wikipedia_url = session.get("subject", "")
+        global_state.wikipedia_url = global_state.tally_wikipedia_url
+        global_state.tally_search_terms = list(session.get("search_terms", []))
+        global_state.search_terms = list(global_state.tally_search_terms)
+        global_state.found_links = list(session.get("found_links", []))
+        global_state.fixed_links = list(session.get("fixed_links", []))
+        global_state.matched_links = list(session.get("matched_links", []))
+        global_state.image_urls = list(session.get("image_urls", []))
+        global_state.images.clear()
+        global_state.messages.clear()
+        self._download_output.clear()
+        global_state.link_term_counts = {
+            url: dict(counts)
+            for url, counts in session.get("link_term_counts", {}).items()
+        }
+        global_state.tally_events = list(session.get("events", []))
         self._rebuild_term_totals()
+        self.ui.subject_url.setText(global_state.wikipedia_url)
+        self.ui.lineEdit_2.setText(", ".join(global_state.search_terms))
+        self._links_output = session.get("links_output", "") or self.format_links(
+            global_state.fixed_links or global_state.found_links
+        )
+        self._tally_output = session.get("tally_output", "") or self.tally_links()
+        self.ui.label_4.setText(self._links_output)
+        self.ui.label_5.setText(self._tally_output)
+
+    def _populate_saved_sessions_menu(self) -> None:
+        self.open_session_menu.clear()
+        sessions = sorted(
+            self._session_store.sessions.items(),
+            key=lambda item: item[1].get("started_at", ""),
+            reverse=True,
+        )
+        for session_id, session in sessions:
+            timestamp = session.get("started_at", "")
+            timestamp_label = timestamp.replace("T", " ")[:19] or "Unknown date"
+            subject = session.get("subject") or "Untitled session"
+            if len(subject) > 48:
+                subject = subject[:45] + "…"
+            label = f"{timestamp_label} · {subject} · {session_id[:8]}"
+            self._add_menu_action(
+                self.open_session_menu,
+                label,
+                lambda checked=False, saved_id=session_id: self.open_saved_session(
+                    saved_id
+                ),
+            )
+        if not sessions:
+            action = QAction("No saved sessions", self)
+            action.setEnabled(False)
+            self.open_session_menu.addAction(action)
+
+    def open_latest_session(self) -> None:
+        latest = self._session_store.latest()
+        if latest is None:
+            QMessageBox.information(self, "Saved Sessions", "No saved sessions yet.")
+            return
+        self.open_saved_session(latest[0])
+
+    def open_saved_session(
+        self, session_id: str, warn_if_busy: bool = True
+    ) -> None:
+        if self._operation_active:
+            if warn_if_busy:
+                QMessageBox.information(
+                    self,
+                    "Operation in Progress",
+                    "Stop the current operation before opening another session.",
+                )
+            return
+        if session_id not in self._session_store.sessions:
+            return
+        if self._session_id in self._session_store.sessions:
+            global_state.tally_wikipedia_url = global_state.wikipedia_url
+            global_state.tally_search_terms = list(global_state.search_terms)
+            self._save_tally_file()
+        if session_id != self._session_id:
+            self.cleanup_images()
+        self._restore_saved_session(session_id)
+
+    def start_new_session(self) -> None:
+        if self._operation_active:
+            return
+        self.show_results()
+        self._clear_download_output()
+        self.cleanup_images()
+        self._begin_new_session("New Session")
+
+    def _begin_new_session(self, event: str) -> None:
+        self._session_id = uuid4().hex
+        self._session_started_at = datetime.now(timezone.utc).isoformat(
+            timespec="microseconds"
+        )
+        self._links_output = ""
+        self._tally_output = ""
+        self._download_output.clear()
+        self._clear_runtime_state(reset_tally=True)
+        self._set_tally_query(global_state.wikipedia_url, global_state.search_terms)
+        self._links_output = "Search results will appear here."
+        self._tally_output = "Session ready. Choose Launch to find references."
+        self.ui.label_4.setText(self._links_output)
+        self.ui.label_5.setText(self._tally_output)
+        self._record_tally_event(event)
+
+    def save_session_now(self) -> None:
+        global_state.tally_wikipedia_url = global_state.wikipedia_url
+        global_state.tally_search_terms = list(global_state.search_terms)
+        if self._save_tally_file():
+            QMessageBox.information(self, "Session Saved", "Saved to tally.csv.")
+        else:
+            QMessageBox.warning(self, "Save Failed", "The session could not be saved.")
+
+    def export_current_session(self) -> None:
+        global_state.tally_wikipedia_url = global_state.wikipedia_url
+        global_state.tally_search_terms = list(global_state.search_terms)
+        if not self._save_tally_file():
+            QMessageBox.warning(self, "Save Failed", "The session could not be saved.")
+            return
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Current Session",
+            "wikiSpyder-session.csv",
+            "CSV Files (*.csv);;All Files (*)",
+        )
+        if not file_path:
+            return
+        if os.path.abspath(file_path) == os.path.abspath(TALLY_FILE):
+            QMessageBox.warning(
+                self,
+                "Choose Another File",
+                "Choose a separate file so the full session archive is preserved.",
+            )
+            return
+        try:
+            self._session_store.export_session(self._session_id, file_path)
+        except (OSError, KeyError, csv.Error) as exc:
+            QMessageBox.critical(self, "Export Failed", str(exc))
+            return
+        QMessageBox.information(self, "Session Exported", f"Saved to {file_path}")
+
+    def _set_restore_latest_on_start(self, enabled: bool) -> None:
+        self._restore_latest_on_start = enabled
+        self._settings.setValue("restore_latest_session", enabled)
+        if enabled:
+            self.open_latest_session()
+
+    def _show_deep_probe_settings(self) -> None:
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Deep Probe Settings")
+        form = QFormLayout(dialog)
+
+        page_limit = QSpinBox(dialog)
+        page_limit.setRange(1, 1000)
+        page_limit.setSuffix(" pages per website")
+        page_limit.setValue(self._deep_probe_page_limit)
+        page_limit.setToolTip(
+            "Maximum number of same-site pages Deep Probe will request from each host."
+        )
+
+        request_delay = QDoubleSpinBox(dialog)
+        request_delay.setRange(0.5, 30.0)
+        request_delay.setSingleStep(0.5)
+        request_delay.setDecimals(1)
+        request_delay.setSuffix(" seconds between requests")
+        request_delay.setValue(self._deep_probe_request_delay)
+        request_delay.setToolTip(
+            "Minimum time between requests to the same website, including robots.txt."
+        )
+
+        form.addRow("Page limit", page_limit)
+        form.addRow("Request spacing", request_delay)
+        scope_note = QLabel(
+            "Crawls same-site links from the currently selected reference links. "
+            "Pages disallowed by that host’s robots.txt are skipped.",
+            dialog,
+        )
+        scope_note.setWordWrap(True)
+        form.addRow("Scope", scope_note)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel,
+            parent=dialog,
+        )
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        form.addRow(buttons)
+
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        self._deep_probe_page_limit = page_limit.value()
+        self._deep_probe_request_delay = request_delay.value()
+        self._settings.setValue("deep_probe_page_limit", self._deep_probe_page_limit)
+        self._settings.setValue(
+            "deep_probe_request_delay", self._deep_probe_request_delay
+        )
+
+    def show_about(self) -> None:
+        QMessageBox.about(
+            self,
+            "About wikiSpyder",
+            f"<h3>{html.escape(APP_DISPLAY_NAME)}</h3>"
+            "Research Wikipedia references, search linked pages, and discover images.",
+        )
 
     def _rebuild_term_totals(self) -> None:
         with self._state_lock:
@@ -427,7 +512,7 @@ class MainWindow(QDialog):
             return
 
         self.cleanup_images()
-        self.ui.label_5.setText("Reloading wikiSpyder from the current codebase...")
+        self._set_tally_output("Reloading wikiSpyder from the current codebase...")
         QApplication.processEvents()
         os.execv(sys.executable, [sys.executable, *sys.argv])
 
@@ -446,7 +531,7 @@ class MainWindow(QDialog):
         self.refresh_button.setEnabled(False)
         if record_event:
             self._record_tally_event("Stop")
-        self.ui.label_5.setText("Killing current operation...")
+        self._set_tally_output("Killing current operation...")
         QApplication.processEvents()
 
     def _set_stop_requested(self, requested: bool) -> None:
@@ -507,7 +592,7 @@ class MainWindow(QDialog):
     def disco_subject(self, text: str) -> None:
         global_state.wikipedia_url = normalize_subject_url(text)
         if not global_state.wikipedia_url:
-            self.ui.label_4.setText("Please fill in the form...")
+            self._set_links_output("Please fill in the form...")
 
     def disco_terms(self, text: str) -> None:
         global_state.search_terms = [
@@ -544,40 +629,17 @@ class MainWindow(QDialog):
             for link in global_state.matched_links:
                 file.write(f"{link}\n")
 
-    def save_images(self) -> None:
-        folder_path = QFileDialog.getExistingDirectory(
-            self, "Select Folder to Save Images"
-        )
-        if not folder_path:
-            return
-
-        try:
-            for filename in os.listdir(IMG_DIR):
-                source_path = os.path.join(IMG_DIR, filename)
-                if os.path.isfile(source_path):
-                    shutil.copy(source_path, folder_path)
-            QMessageBox.information(self, "Success", f"Images saved to {folder_path}")
-        except OSError as exc:
-            QMessageBox.critical(
-                self, "Error", f"Failed to save images: {exc}"
-            )
-
     def spyder_1st_run(self) -> None:
         if self._operation_active:
             return
 
-        self._clear_runtime_state(reset_tally=True)
-        self._set_tally_query(
-            global_state.wikipedia_url,
-            global_state.search_terms,
-        )
-        self._record_tally_event("Launch")
+        self._begin_new_session("Launch")
 
         if not global_state.wikipedia_url:
-            self.ui.label_4.setText("No subject URL found...")
+            self._set_links_output("No subject URL found...")
             return
 
-        self.ui.label_4.setText("Launching spider...")
+        self._set_links_output("Launching spider...")
         self._start_worker(
             lambda: self._run_reference_operation(
                 global_state.wikipedia_url,
@@ -608,14 +670,12 @@ class MainWindow(QDialog):
         return self.format_links(result), self.tally_links(), False
 
     def update_tally_view(self) -> None:
-        self.ui.label_5.setText(self.tally_links())
+        self._set_tally_output(self.tally_links())
 
     def _find_images_core(self, urls: list[str]) -> list[tuple[str, str]]:
         self._kill_event = None
         global_state.messages.clear()
         global_state.image_urls.clear()
-        with self._state_lock:
-            self._download_output.clear()
 
         if not urls:
             return []
@@ -636,9 +696,11 @@ class MainWindow(QDialog):
         if self._operation_active:
             return []
 
+        self.show_results()
+        self._clear_download_output()
         self.cleanup_images()
         if not urls:
-            self.ui.label_5.setText("No links available for image probing.")
+            self._set_tally_output("No links available for image probing.")
             return []
 
         self._start_worker(
@@ -674,33 +736,24 @@ class MainWindow(QDialog):
             return self._format_download_output_locked()
 
     def _format_download_output_locked(self) -> str:
-        if not self._download_output:
-            return ""
-
-        rows = "".join(
-            f"<li>{html.escape(message)}</li>"
-            for message in self._download_output
-        )
-        return "<h2>Image Download Output</h2><ul>" + rows + "</ul>"
+        return format_download_output(self._download_output)
 
     def view_images(self) -> None:
         if self._operation_active:
             return
 
+        self.show_results()
         self._record_tally_event("View Images")
-        links = (
-            global_state.matched_links
-            if global_state.matched_links
-            else global_state.fixed_links
-        )
+        self._clear_download_output()
+        links = self._focused_probe_links()
         self.cleanup_images()
         if not links:
-            self.ui.label_5.setText("No links available for image probing.")
+            self._set_tally_output("No links available for image probing.")
             return
 
         self._start_worker(
             lambda: self._run_image_operation(links, show_viewer=True),
-            "Finding images in matched links...",
+            "Finding images in selected links...",
         )
 
     def deep_probe_view(self) -> None:
@@ -708,16 +761,23 @@ class MainWindow(QDialog):
             return
 
         self._record_tally_event("Deep Probe")
-        base_links = (
-            global_state.matched_links
-            if global_state.matched_links
-            else global_state.fixed_links
-        )
+        self._clear_download_output()
+        base_links = self._focused_probe_links()
         self.cleanup_images()
         self._start_worker(
             lambda: self._run_deep_probe_operation(base_links),
-            "Deep probing reference pages...",
+            "Deep probing selected links...",
         )
+
+    @staticmethod
+    def _focused_probe_links() -> list[str]:
+        if global_state.matched_links:
+            return list(global_state.matched_links)
+        return list(global_state.found_links or global_state.fixed_links)
+
+    def _clear_download_output(self) -> None:
+        with self._state_lock:
+            self._download_output.clear()
 
     def _run_deep_probe_operation(
         self, base_links: list[str]
@@ -726,6 +786,9 @@ class MainWindow(QDialog):
             base_links,
             self._get_with_responsive_stop,
             lambda: self._stop_requested or self._stop_event.is_set(),
+            progress_callback=self._append_download_output,
+            max_pages_per_site=self._deep_probe_page_limit,
+            request_delay=self._deep_probe_request_delay,
         )
         if self._stop_requested or self._stop_event.is_set():
             return None, self._format_download_output() + "Operation cancelled.", False
@@ -742,61 +805,35 @@ class MainWindow(QDialog):
         return self.format_links(deep_links), self._format_download_output() + self.tally_links(), True
 
     def format_links(self, links: list[str]) -> str:
-        if not links:
-            return "No links found."
-
-        formatted_links: list[str] = []
-        for index, link in enumerate(links, start=1):
-            if link.startswith("http://") or link.startswith("https://"):
-                formatted_links.append(
-                    f'{index}. <a href="{link}" '
-                    'style="color: yellow; text-decoration: underline;">'
-                    f"{link}</a>"
-                )
-            else:
-                formatted_links.append(f"{index}. {link}")
-
-        return (
-            "<h2>Links Found</h2>"
-            "<h4>Click a link to visit it.</h4><br/>"
-            + "<br/>".join(formatted_links)
-        )
+        return format_links(links)
 
     def tally_links(self) -> str:
-        return (
-            "<h2>Links Found Tally</h2>"
-            f"<p>Found Links = {len(global_state.fixed_links)}</p>"
-            f"<p>Matched Links = {self._matched_links_count()}</p>"
-            f"<p>Search Term Hits = {self._search_term_hits_count()}</p>"
-            f"<p>Tally File = {html.escape(os.path.basename(TALLY_FILE))}</p>"
-            f"{self._format_tally_events()}"
-            f"{self._format_term_totals()}"
-            f"{self._format_link_term_counts()}"
-            f"<p>Images Found = {len(global_state.image_urls)}</p>"
-            f"<p>Images Saved = {len(global_state.images)}</p>"
+        return format_tally(
+            session_id=self._session_id,
+            saved_session_count=len(self._session_store.sessions),
+            found_link_count=len(global_state.fixed_links),
+            matched_count=matched_links_count(
+                global_state.link_term_counts, global_state.matched_links
+            ),
+            search_term_hits=search_term_hits_count(global_state.term_totals),
+            tally_filename=os.path.basename(TALLY_FILE),
+            tally_events=format_tally_events(global_state.tally_events),
+            term_totals=format_term_totals(
+                global_state.search_terms, global_state.term_totals
+            ),
+            link_term_counts=format_link_term_counts(
+                global_state.search_terms, global_state.link_term_counts
+            ),
+            image_url_count=len(global_state.image_urls),
+            saved_image_count=len(global_state.images),
         )
-
-    @staticmethod
-    def _matched_links_count() -> int:
-        matched_by_content = [
-            link
-            for link, counts in global_state.link_term_counts.items()
-            if sum(counts.values())
-        ]
-        if matched_by_content:
-            return len(matched_by_content)
-        return len(global_state.matched_links)
-
-    @staticmethod
-    def _search_term_hits_count() -> int:
-        return sum(global_state.term_totals.values())
 
     def _record_link_term_counts(self, url: str, page_text: str) -> None:
         if not global_state.search_terms:
             return
 
         with self._state_lock:
-            counts = self._count_search_terms(page_text, global_state.search_terms)
+            counts = count_search_terms(page_text, global_state.search_terms)
             global_state.link_term_counts[url] = counts
             self._rebuild_term_totals()
             self._save_tally_file()
@@ -804,59 +841,6 @@ class MainWindow(QDialog):
             if sum(counts.values()) and url not in global_state.matched_links:
                 global_state.matched_links.append(url)
 
-    @staticmethod
-    def _count_search_terms(page_text: str, search_terms: list[str]) -> dict[str, int]:
-        return {
-            term: len(re.findall(re.escape(term), page_text, flags=re.IGNORECASE))
-            for term in search_terms
-        }
-
-    def _format_term_totals(self) -> str:
-        if not global_state.search_terms:
-            return "<p>Search terms = none</p>"
-
-        rows = [
-            f"<li>{html.escape(term)} = {global_state.term_totals.get(term, 0)}</li>"
-            for term in global_state.search_terms
-        ]
-        return "<h3>Terms</h3><ul>" + "".join(rows) + "</ul>"
-
-    def _format_tally_events(self) -> str:
-        if not global_state.tally_events:
-            return ""
-
-        recent_events = global_state.tally_events[-5:]
-        rows = [f"<li>{html.escape(event)}</li>" for event in recent_events]
-        return "<h3>Actions</h3><ul>" + "".join(rows) + "</ul>"
-
-    def _format_link_term_counts(self) -> str:
-        if not global_state.search_terms or not global_state.link_term_counts:
-            return ""
-
-        rows: list[str] = []
-        for url, counts in global_state.link_term_counts.items():
-            hit_count = sum(counts.values())
-            if not hit_count:
-                continue
-
-            term_counts = ", ".join(
-                f"{html.escape(term)}: {count}"
-                for term, count in counts.items()
-                if count
-            )
-            rows.append(
-                '<li><a href="{url}" style="color: yellow; text-decoration: underline;">'
-                "{label}</a><br/>{term_counts}</li>".format(
-                    url=html.escape(url, quote=True),
-                    label=html.escape(url),
-                    term_counts=term_counts,
-                )
-            )
-
-        if not rows:
-            return "<h3>Links</h3><p>No search terms found on probed pages.</p>"
-
-        return "<h3>Links</h3><ol>" + "".join(rows) + "</ol>"
 
     def cleanup_images(self) -> None:
         global_state.images.clear()
@@ -872,6 +856,15 @@ class MainWindow(QDialog):
         self.kill_current_operation(record_event=False)
         if self._worker is not None and self._worker.isRunning():
             self._worker.wait(1500)
+        global_state.tally_wikipedia_url = global_state.wikipedia_url
+        global_state.tally_search_terms = list(global_state.search_terms)
+        has_session_data = (
+            self._session_id in self._session_store.sessions
+            or bool(global_state.wikipedia_url)
+            or bool(global_state.tally_events)
+        )
+        if has_session_data:
+            self._save_tally_file()
         self._network_executor.shutdown(wait=False, cancel_futures=True)
         self.cleanup_images()
         event.accept()
@@ -880,6 +873,8 @@ def main() -> int:
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
+    if os.path.isfile(ICON_FILE):
+        app.setWindowIcon(QIcon(ICON_FILE))
 
     window = MainWindow()
     window.show()

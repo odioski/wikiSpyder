@@ -1,17 +1,26 @@
 # Codename: Michelle
 import os
 import re
+import sys
 from dataclasses import dataclass, field
 from urllib.parse import urljoin
 
 APP_NAME = "wikiSpyder"
-APP_VERSION = "0.9.2"
+APP_VERSION = "1.0.0"
 APP_CODENAME = "Michelle"
 APP_DISPLAY_NAME = f"{APP_NAME} {APP_VERSION} - Codename {APP_CODENAME}"
+APP_VERSION_LABEL = APP_DISPLAY_NAME
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(PACKAGE_DIR)
 IMG_DIR = os.path.join(BASE_DIR, "saved_images")
 TALLY_FILE = os.path.join(BASE_DIR, "tally.csv")
+ICON_FILE = os.path.join(BASE_DIR, "assets", "wikiSpyder.ico")
+if not os.path.isfile(ICON_FILE):
+    ICON_FILE = os.path.join(sys.prefix, "share", "wikiSpyder", "wikiSpyder.ico")
+QSS_FILE = os.path.join(BASE_DIR, "wikiSpyder.qss")
+if not os.path.isfile(QSS_FILE):
+    QSS_FILE = os.path.join(sys.prefix, "share", "wikiSpyder", "wikiSpyder.qss")
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "

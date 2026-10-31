@@ -51,10 +51,10 @@ jobs:
         run: python -m pip check
 
       - name: Compile application modules
-        run: python -m py_compile __main__.py main.py newwindow.py setup.py
+        run: python -m py_compile __main__.py main.py setup.py wiki_spyder/*.py
 
       - name: Import application and dependency modules
-        run: python -c "import aiohttp, main, newwindow; from PIL import Image"
+        run: python -c "import aiohttp, main, wiki_spyder.newwindow; from PIL import Image"
 
       - name: Smoke test Pillow image verify and save behavior
         run: |

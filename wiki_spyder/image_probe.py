@@ -9,7 +9,7 @@ import requests
 from bs4 import BeautifulSoup
 from PIL import Image, UnidentifiedImageError
 
-from app_state import (
+from .app_state import (
     USER_AGENT,
     build_image_path,
     global_state,

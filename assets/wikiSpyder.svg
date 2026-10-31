@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <clipPath id="globe">
+      <circle cx="128" cy="128" r="106"/>
+    </clipPath>
+  </defs>
+  <circle cx="128" cy="128" r="116" fill="#f7f9fb" stroke="#243449" stroke-width="8"/>
+  <g clip-path="url(#globe)" fill="none" stroke="#52677d" stroke-linecap="round" stroke-width="5">
+    <ellipse cx="128" cy="128" rx="48" ry="106"/>
+    <ellipse cx="128" cy="128" rx="91" ry="106"/>
+    <path d="M29 92c30 18 62 27 99 27s69-9 99-27M29 164c30-18 62-27 99-27s69 9 99 27"/>
+    <path d="M46 61l24 9 12-17M186 204l-13-19 19-12M202 61l-21 12 4 18M55 194l20-9-2-17" stroke="#2f80bd"/>
+  </g>
+  <g fill="none" stroke="#243449" stroke-linecap="round" stroke-linejoin="round" stroke-width="8">
+    <path d="M119 119L91 96 69 96M116 128L82 127 57 139M118 138L91 158 72 178M124 145L111 178 112 198"/>
+    <path d="M137 119l28-23 22 0M140 128l34-1 25 12M138 138l27 20 19 20M132 145l13 33-1 20"/>
+  </g>
+  <ellipse cx="128" cy="131" rx="16" ry="21" fill="#243449"/>
+  <circle cx="128" cy="109" r="10" fill="#2f80bd" stroke="#243449" stroke-width="5"/>
+  <circle cx="123" cy="127" r="3" fill="#f7f9fb"/>
+  <circle cx="133" cy="127" r="3" fill="#f7f9fb"/>
+</svg>

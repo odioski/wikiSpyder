@@ -7,7 +7,7 @@ Advanced Wikipedia Search Tool
 > [!IMPORTANT]
 > **Codename: Michelle**
 >
-> wikiSpyder 0.9.2 is the Michelle build.
+> wikiSpyder 1.0.0 is the Michelle build.
 
 # ABOUT wikiSpyder
 The goal of this app/utility is to assist users, researchers and investigators of any kind, as well as students, journalists, or anyone who likes to use Wikipedia while searching for information. 
@@ -27,11 +27,12 @@ If you like, wikiSpyder will continue to crawl until you've narrowed down the si
 
 - wikiSpyder can save all images automatically, if Save Images is checked.
 
-- For now, all data pulled by wikiSpyder which isn't saved is purged once the program is exited.
+- Search sessions, reference links, term counts, action history, and the displayed output are saved in `tally.csv` and restored when the app next opens. Temporary downloaded image files are purged when the program exits.
+- Use the **Sessions** menu to reopen saved research, and **File → Export Current Session** to write one session to its own CSV file. **Options → Restore Latest Session on Startup** controls automatic restoration.
 
 # Installation
 
-wikiSpyder 0.9.2, Codename Michelle, targets **Python 3.12**.
+wikiSpyder 1.0.0, Codename Michelle, targets **Python 3.12**.
 
 Clone the repository and create a virtual environment:
 
@@ -68,8 +69,8 @@ code wikiSpyder.code-workspace
 Before cutting a release, run:
 
 ```bash
-venv/bin/python -m py_compile __main__.py main.py newwindow.py setup.py
-venv/bin/python -c "import main, newwindow"
+venv/bin/python -m py_compile __main__.py main.py setup.py wiki_spyder/*.py
+venv/bin/python -c "import main, wiki_spyder.newwindow"
 QT_QPA_PLATFORM=offscreen venv/bin/python -c "from PyQt6.QtCore import QTimer; from PyQt6.QtWidgets import QApplication; import main; app = QApplication([]); window = main.MainWindow(); window.show(); QTimer.singleShot(0, window.close); QTimer.singleShot(0, app.quit); raise SystemExit(app.exec())"
 ```
 
@@ -78,6 +79,7 @@ Then do a quick manual pass in the GUI:
 - launch the app
 - fetch references from a known Wikipedia page
 - run **Deep Probe**
+- Deep Probe follows same-host links from the selected references, checks each host's `robots.txt`, and defaults to 100 pages per host with at least one second between requests. Adjust the page limit and request spacing in **Options → Deep Probe Settings**.
 - open **View Images**
 - confirm closing the app clears temporary downloaded images
 

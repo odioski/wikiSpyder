@@ -6,9 +6,10 @@ wikiSpyder is a **Python 3.12 + PyQt6 desktop application** for scraping a Wikip
 
 ## Project shape
 
-- `main.py` is the real application entry point and contains the runtime behavior.
+- `main.py` is the real application entry point and coordinates runtime behavior.
 - `__main__.py` is only a thin launcher that calls `main.main()`.
-- `newwindow.py` is generated from `main-view.ui` by `pyuic6`. Prefer editing `main-view.ui` and regenerating `newwindow.py` instead of hand-editing the generated file.
+- Supporting Python modules live in the `wiki_spyder/` package.
+- `wiki_spyder/newwindow.py` is generated from `main-view.ui` by `pyuic6`. Prefer editing `main-view.ui` and regenerating the generated file instead of hand-editing it.
 
 ## Repo-specific conventions
 
@@ -37,7 +38,7 @@ wikiSpyder is a **Python 3.12 + PyQt6 desktop application** for scraping a Wikip
 
 The repository does not currently define a full automated test suite. The existing lightweight checks are:
 
-- `python -m py_compile __main__.py main.py newwindow.py setup.py`
-- `python -c "import main, newwindow"`
+- `python -m py_compile __main__.py main.py setup.py wiki_spyder/*.py`
+- `python -c "import main, wiki_spyder.newwindow"`
 
 For GUI-affecting changes, also launch the app locally and exercise the edited flow.
